@@ -1,0 +1,7 @@
+import { createRouteHandler } from "uploadthing/next";
+import { ourFileRouter } from "./core";
+
+// Expose the Next.js App Router handlers
+export const { GET, POST } = createRouteHandler({
+  router: ourFileRouter,
+});
