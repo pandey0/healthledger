@@ -14,7 +14,7 @@ A Next.js 16 health data management app that lets users upload medical reports, 
 ## Project Structure
 
 - `app/` — Next.js App Router pages and API routes
-  - `app/(app)/` — Authenticated app pages (vault, upload, chat)
+  - `app/(app)/` — Authenticated app pages (vault, upload, chat, explore)
   - `app/(marketing)/` — Public marketing pages
   - `app/api/auth/` — NextAuth route handler
   - `app/api/uploadthing/` — UploadThing route handler
@@ -63,7 +63,8 @@ npx prisma migrate deploy # apply pending migrations
 
 ## Component Architecture
 
-- `components/layout/MobileNav.tsx` — Mobile bottom nav (client, hides on `/chat`)
+- `components/layout/MobileNav.tsx` — Mobile bottom nav (client, hides on `/chat` and `/upload/review`)
+- `components/home/EcosystemCarousel.tsx` — Swipeable carousel for ecosystem pages (Lab, Doctors, Store)
 - `components/layout/NavLinks.tsx` — Sidebar nav with active state (client, uses `usePathname`)
 - `components/vault/TrendGraph.tsx` — Recharts line graph with reference band and color-coded dots
 - `components/ui/` — shadcn primitives customized to HealthLedger design system

@@ -7,9 +7,9 @@ import { Home, FolderHeart, MessageSquareText, Plus, Compass } from "lucide-reac
 export default function MobileNav() {
   const pathname = usePathname();
 
-  if (pathname === "/chat") return null;
+  if (pathname === "/chat" || pathname.startsWith("/upload/review")) return null;
 
-  const isExplore = ["/lab", "/doctors", "/store"].some(p => pathname.startsWith(p));
+  const isExplore = ["/explore", "/lab", "/doctors", "/store"].some(p => pathname.startsWith(p));
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-50">
@@ -28,7 +28,7 @@ export default function MobileNav() {
           </Link>
 
           <NavItem href="/chat" label="AI" icon={MessageSquareText} active={pathname === "/chat"} />
-          <NavItem href="/lab" label="Explore" icon={Compass} active={isExplore} />
+          <NavItem href="/explore" label="Explore" icon={Compass} active={isExplore} />
 
         </div>
       </div>

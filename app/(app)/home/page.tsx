@@ -3,10 +3,11 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import {
-  Activity, Plus, TrendingUp, FlaskConical, Stethoscope,
-  ShoppingBag, MessageSquareText, AlertCircle, CheckCircle,
+  Activity, Plus, TrendingUp,
+  MessageSquareText, AlertCircle, CheckCircle,
   ArrowRight, ChevronRight, Clock, Sparkles, Zap,
 } from "lucide-react";
+import EcosystemCarousel from "@/components/home/EcosystemCarousel";
 
 export default async function HomePage() {
   const session = await auth();
@@ -31,7 +32,7 @@ export default async function HomePage() {
     : null;
 
   return (
-    <div className="flex flex-col animate-in fade-in duration-500 pb-12">
+    <div className="flex flex-col animate-in fade-in duration-500 pb-28 md:pb-12">
 
       {/* Greeting header */}
       <header className="px-6 pt-10 pb-6">
@@ -190,61 +191,7 @@ export default async function HomePage() {
           </>
         )}
 
-        {/* Ecosystem — always visible and now linkable */}
-        <div>
-          <h3 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">Health Ecosystem</h3>
-          <div className="space-y-3">
-
-            <Link href="/lab">
-              <div className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:border-cyan-100 hover:shadow-md transition-all group">
-                <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-teal-600 rounded-[16px] flex items-center justify-center shrink-0 shadow-sm">
-                  <FlaskConical className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-[15px] font-bold text-slate-800">Book Lab Tests</p>
-                    <span className="px-2 py-0.5 bg-cyan-50 text-cyan-600 text-[9px] font-bold rounded-full border border-cyan-100 uppercase tracking-wider">Beta</span>
-                  </div>
-                  <p className="text-[12px] text-slate-400 font-medium mt-0.5">Thyrocare · Redcliffe · 1mg · Dr Lal</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-cyan-500 group-hover:translate-x-0.5 transition-all shrink-0" />
-              </div>
-            </Link>
-
-            <Link href="/doctors">
-              <div className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:border-emerald-100 hover:shadow-md transition-all group">
-                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[16px] flex items-center justify-center shrink-0 shadow-sm">
-                  <Stethoscope className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-[15px] font-bold text-slate-800">Consult Doctors</p>
-                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-bold rounded-full border border-emerald-100 uppercase tracking-wider">Beta</span>
-                  </div>
-                  <p className="text-[12px] text-slate-400 font-medium mt-0.5">500+ specialists · Share health timeline</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
-              </div>
-            </Link>
-
-            <Link href="/store">
-              <div className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:border-violet-100 hover:shadow-md transition-all group">
-                <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-700 rounded-[16px] flex items-center justify-center shrink-0 shadow-sm">
-                  <ShoppingBag className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-[15px] font-bold text-slate-800">Health Store</p>
-                    <span className="px-2 py-0.5 bg-violet-50 text-violet-600 text-[9px] font-bold rounded-full border border-violet-100 uppercase tracking-wider">Beta</span>
-                  </div>
-                  <p className="text-[12px] text-slate-400 font-medium mt-0.5">AI-curated supplements, devices & kits</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-violet-500 group-hover:translate-x-0.5 transition-all shrink-0" />
-              </div>
-            </Link>
-
-          </div>
-        </div>
+        <EcosystemCarousel />
 
         {/* AI Assistant */}
         <Link href="/chat" className="block outline-none group">
