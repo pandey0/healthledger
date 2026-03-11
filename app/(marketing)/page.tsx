@@ -1,137 +1,201 @@
-import { signIn } from "@/auth";
-import { 
-  Activity, 
-  ShieldCheck, 
-  FolderOpen, 
-  MessageSquareText,
-  ArrowRight,
-  LineChart
-} from "lucide-react";
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
+import { signIn } from "next-auth/react"; 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Activity, Lock } from "lucide-react"; 
 
-export default function LandingPage() {
+const steps = [
+  {
+    id: "step-1",
+    image: "/onboarding/1.png",
+    title: "Find the best doctor and medicine for you.",
+  },
+  {
+    id: "step-2",
+    image: "/onboarding/2.png",
+    title: "Track your health trends securely over time.",
+  },
+  {
+    id: "step-3",
+    image: "/onboarding/3.png", 
+    title: "Your complete medical history in one place.",
+  }
+];
+
+export default function AppSetupPage() {
+  const [currentStep, setCurrentStep] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  const [showSplash, setShowSplash] = useState(true);
+  const [animateLogo, setAnimateLogo] = useState(false);
+  const [slideUp, setSlideUp] = useState(false);
+  const [isInteracting, setIsInteracting] = useState(false);
+
+  useEffect(() => {
+    const logoTimer = setTimeout(() => setAnimateLogo(true), 800);
+    const slideTimer = setTimeout(() => setSlideUp(true), 1100);
+    const removeTimer = setTimeout(() => setShowSplash(false), 2000);
+
+    return () => {
+      clearTimeout(logoTimer);
+      clearTimeout(slideTimer);
+      clearTimeout(removeTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (showSplash || isInteracting) return;
+
+    const timer = setInterval(() => {
+      if (scrollContainerRef.current) {
+        const container = scrollContainerRef.current;
+        const width = container.clientWidth;
+        
+        let nextStep = currentStep + 1;
+        if (nextStep >= steps.length) {
+          nextStep = 0;
+        }
+
+        container.scrollTo({
+          left: nextStep * width,
+          behavior: "smooth"
+        });
+      }
+    }, 3500);
+
+    return () => clearInterval(timer);
+  }, [showSplash, isInteracting, currentStep]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const scrollPosition = e.currentTarget.scrollLeft;
+    const clientWidth = e.currentTarget.clientWidth;
+    const activeIndex = Math.round(scrollPosition / clientWidth);
+    setCurrentStep(activeIndex);
+  };
+
+  const handleDotClick = (index: number) => {
+    if (scrollContainerRef.current) {
+      const width = scrollContainerRef.current.clientWidth;
+      scrollContainerRef.current.scrollTo({
+        left: index * width,
+        behavior: "smooth"
+      });
+      setCurrentStep(index);
+    }
+  };
+
   return (
-    <div className="relative min-h-screen bg-white selection:bg-slate-200 flex flex-col overflow-hidden">
+    <div className="min-h-[100dvh] w-full bg-[#F4F3F0] flex items-center justify-center md:p-6 selection:bg-blue-100 relative overflow-hidden">
       
-      {/* Calm Background Grid & Glow */}
-      <div className="absolute inset-0 -z-10 h-full w-full bg-white bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
-      <div className="absolute top-0 z-[-1] h-screen w-screen bg-white bg-[radial-gradient(100%_50%_at_50%_0%,rgba(51,65,85,0.05)_0,rgba(51,65,85,0)_50%,rgba(51,65,85,0)_100%)]"></div>
-
-      {/* Glassmorphism Navigation */}
-      <nav className="sticky top-0 z-50 w-full border-b border-slate-200/50 bg-white/70 backdrop-blur-md">
-        <div className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
-          <div className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer">
-            <div className="p-1.5 bg-slate-700 rounded-xl shadow-sm border border-slate-600/20">
-              <Activity className="w-5 h-5 text-white" />
+      {/* 🚀 THE NATIVE SPLASH SCREEN */}
+      {showSplash && (
+        <div 
+          className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#1A365D] transition-transform duration-[800ms] ease-[cubic-bezier(0.76,0,0.24,1)] ${
+            slideUp ? "-translate-y-full" : "translate-y-0"
+          }`}
+        >
+          <div 
+            className={`flex flex-col items-center transition-all duration-[400ms] ease-out ${
+              animateLogo ? "scale-110 opacity-0" : "scale-100 opacity-100"
+            }`}
+          >
+            <div className="p-4 bg-white/10 rounded-3xl mb-5 backdrop-blur-md border border-white/20 shadow-2xl">
+              <Activity className="w-14 h-14 text-white" />
             </div>
-            <span className="font-bold text-xl tracking-tight text-slate-900">HealthLedger</span>
-          </div>
-          
-          <form action={async () => { "use server"; await signIn("google", { redirectTo: "/vault" }); }}>
-            <Button variant="ghost" className="text-slate-600 font-medium rounded-full px-5 hover:bg-slate-100">
-              Sign In
-            </Button>
-          </form>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <main className="flex-1 max-w-6xl mx-auto px-6 pt-24 pb-20 text-center flex flex-col items-center justify-center animate-in fade-in slide-in-from-bottom-8 duration-700">
-        
-        <Badge variant="outline" className="mb-8 py-1.5 px-4 text-xs font-semibold text-slate-600 bg-white shadow-sm hover:border-slate-300 transition-colors gap-2">
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-500"></span>
-          </span>
-          Your Personal Medical Vault
-        </Badge>
-        
-        <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 tracking-tighter mb-6 leading-[1.05] max-w-4xl">
-          Stop carrying messy folders. <br className="hidden md:block" />
-          <span className="text-slate-500">
-            Start understanding your health.
-          </span>
-        </h1>
-        
-        <p className="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
-          HealthLedger replaces your physical medical records with a smart digital vault. Upload your lab reports to instantly track vital trends and chat directly with your medical history.
-        </p>
-
-        {/* Primary CTA */}
-        <div className="flex flex-col items-center gap-5">
-          <form action={async () => { "use server"; await signIn("google", { redirectTo: "/vault" }); }}>
-            <Button size="lg" className="h-14 px-8 text-base bg-slate-900 hover:bg-slate-800 text-white rounded-full shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-200 gap-3">
-              <img src="https://authjs.dev/img/providers/google.svg" alt="Google" className="w-5 h-5 bg-white rounded-full p-0.5" />
-              Start Your Digital Ledger
-              <ArrowRight className="w-4 h-4 ml-1 opacity-70" />
-            </Button>
-          </form>
-          
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-400 bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full border border-slate-100">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            Bank-grade encryption. We never sell your personal data.
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">HealthLedger</h1>
           </div>
         </div>
+      )}
+
+      {/* 📱 THE MOBILE PHONE CONTAINER */}
+      <main 
+        className={`w-full h-[100dvh] md:h-[820px] md:max-w-[400px] bg-white md:rounded-[40px] shadow-sm flex flex-col relative overflow-hidden transition-all duration-[800ms] ease-[cubic-bezier(0.76,0,0.24,1)] ${
+          slideUp ? "scale-100 opacity-100 translate-y-0" : "scale-95 opacity-0 translate-y-8"
+        }`}
+      >
+        
+        {/* The Swipeable Area with Interaction Sensors */}
+        <div 
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          onTouchStart={() => setIsInteracting(true)}
+          onTouchEnd={() => setIsInteracting(false)}
+          onMouseDown={() => setIsInteracting(true)}
+          onMouseUp={() => setIsInteracting(false)}
+          onMouseLeave={() => setIsInteracting(false)}
+          // Changed padding top to be responsive (pt-8 on small screens, pt-16 on larger)
+          className="flex-1 flex overflow-x-auto snap-x snap-mandatory hide-scrollbar smooth-scroll pt-8 sm:pt-16 cursor-grab active:cursor-grabbing"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          <style dangerouslySetInnerHTML={{__html: `::-webkit-scrollbar { display: none; }`}} />
+
+          {steps.map((step, idx) => (
+            // Changed justify-start to justify-center to dynamically balance the vertical space
+            <div 
+              key={step.id} 
+              className="w-full h-full flex-shrink-0 snap-center flex flex-col items-center justify-center px-6 sm:px-8 pb-4"
+            >
+              {/* Responsive Image Container: Uses max-h-[35vh] so it shrinks on short phones */}
+              <div className="relative w-full max-w-[240px] sm:max-w-[280px] aspect-square max-h-[35vh] mb-6 sm:mb-10">
+                <Image
+                  src={step.image}
+                  alt={step.title}
+                  fill
+                  className="object-contain"
+                  priority={idx === 0}
+                />
+              </div>
+              
+              {/* Responsive Typography: Shrinks text slightly on very small screens */}
+              <h1 className="text-2xl sm:text-[28px] font-bold text-[#111827] leading-[1.3] tracking-tight text-center w-full px-2">
+                {step.title}
+              </h1>
+            </div>
+          ))}
+        </div>
+
+        {/* 🔒 THE STATIC BOTTOM SECTION */}
+        <div className="w-full flex flex-col items-center px-6 sm:px-8 pb-6 sm:pb-8 pt-2 bg-white z-10">
+          
+          {/* Clickable Swiper Dots */}
+          <div className="flex items-center justify-center gap-2 mb-6 sm:mb-8">
+            {steps.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleDotClick(idx)}
+                aria-label={`Go to slide ${idx + 1}`}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  idx === currentStep ? "w-6 bg-[#1A365D]" : "w-2 bg-slate-200 hover:bg-slate-300"
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Get Started Button */}
+          <Button 
+            onClick={() => signIn("google", { callbackUrl: "/home" })}
+            className="w-full max-w-[240px] h-12 sm:h-14 bg-[#1A365D] hover:bg-[#12243e] text-white rounded-[16px] text-[16px] sm:text-[17px] font-semibold transition-all hover:scale-105 active:scale-95 shadow-md mb-4 sm:mb-5"
+          >
+            Get Started
+          </Button>
+
+          {/* Trust & Security Anchor */}
+          <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold text-slate-500 mb-3">
+            <Lock className="w-3 h-3 text-emerald-600" />
+            <span>Secure, Private, & HIPAA Compliant</span>
+          </div>
+
+          {/* Legal Protections */}
+          <p className="text-[9px] sm:text-[10px] text-slate-400 font-medium text-center leading-relaxed">
+            By continuing, you agree to HealthLedger's <br className="hidden sm:block"/>
+            <a href="#" className="underline decoration-slate-200 hover:text-slate-600 transition-colors">Terms of Service</a> and <a href="#" className="underline decoration-slate-200 hover:text-slate-600 transition-colors">Privacy Policy</a>.
+          </p>
+
+        </div>
+
       </main>
-
-      {/* Calm Bento-Box Feature Section */}
-      <section className="bg-white py-24 relative z-20">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4 tracking-tight">Why you need HealthLedger</h2>
-            <p className="text-slate-500 font-medium">Built to solve the three biggest frustrations with personal healthcare.</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            
-            <Card className="group bg-slate-50/50 border-slate-200/60 hover:border-slate-300 hover:shadow-lg hover:bg-white transition-all duration-300">
-              <CardHeader>
-                <div className="w-12 h-12 bg-white text-slate-700 border border-slate-200 rounded-2xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-105 transition-transform duration-300">
-                  <FolderOpen className="w-6 h-6" />
-                </div>
-                <CardTitle className="tracking-tight text-xl text-slate-800">Ditch Physical Copies</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-sm text-slate-500 leading-relaxed font-medium">
-                  No more digging through dusty files or scrolling through old WhatsApp messages. Snap a photo, and our system securely digitizes and stores the original document forever.
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="group bg-slate-50/50 border-slate-200/60 hover:border-slate-300 hover:shadow-lg hover:bg-white transition-all duration-300 md:-translate-y-4">
-              <CardHeader>
-                <div className="w-12 h-12 bg-white text-slate-700 border border-slate-200 rounded-2xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-105 transition-transform duration-300">
-                  <LineChart className="w-6 h-6" />
-                </div>
-                <CardTitle className="tracking-tight text-xl text-slate-800">Track Hidden Trends</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-sm text-slate-500 leading-relaxed font-medium">
-                  A single blood test tells you nothing about your trajectory. Our AI extracts your biomarkers and graphs them over years, helping you spot dropping vitamin levels instantly.
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="group bg-slate-50/50 border-slate-200/60 hover:border-slate-300 hover:shadow-lg hover:bg-white transition-all duration-300">
-              <CardHeader>
-                <div className="w-12 h-12 bg-white text-slate-700 border border-slate-200 rounded-2xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-105 transition-transform duration-300">
-                  <MessageSquareText className="w-6 h-6" />
-                </div>
-                <CardTitle className="tracking-tight text-xl text-slate-800">Chat With Your Data</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-sm text-slate-500 leading-relaxed font-medium">
-                  Meet your specialized health assistant. Instead of manually searching, just ask: <em>"What was my HbA1c last October?"</em> and the AI will pull the exact number and link the PDF.
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-          </div>
-        </div>
-      </section>
-
     </div>
   );
 }
