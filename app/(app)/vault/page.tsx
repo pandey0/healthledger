@@ -1,79 +1,145 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import { FileText, ChevronRight, Activity, Plus } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-
-// Import our secure Data Access Layer
+import { FileText, ChevronRight, Activity, Plus, FolderHeart, Search } from "lucide-react";
 import { getUserDocuments } from "@/lib/dal/vault";
 
 export default async function VaultPage() {
-  // Fetch data securely on the server
   const documents = await getUserDocuments();
+  const totalMarkers = documents.reduce((acc, d) => acc + d._count.extractedData, 0);
 
   return (
-    <div className="flex flex-col h-full animate-in fade-in duration-700 max-w-2xl mx-auto pb-8">
-      
-      {/* Calm Header Section */}
-      <header className="px-6 pt-8 pb-6">
-        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Your Vault</h1>
-        <p className="text-slate-500 mt-2 font-medium leading-relaxed">
-          A secure archive of your medical history and extracted biomarkers.
+    <div className="flex flex-col animate-in fade-in duration-700 pb-12">
+
+      {/* Header */}
+      <header className="px-6 pt-10 pb-5">
+        <h1 className="text-[32px] font-extrabold text-slate-800 tracking-tight">Medical Vault</h1>
+        <p className="text-slate-500 mt-1 font-medium text-[14px]">
+          Your personal archive of reports and extracted biomarkers.
         </p>
       </header>
 
-      <main className="px-6">
-        {/* Empty State */}
-        {documents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 px-4 text-center border-2 border-dashed border-slate-200/60 rounded-2xl bg-slate-50/50 mt-4">
-            <div className="w-16 h-16 bg-white border border-slate-100 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
-              <Activity className="w-8 h-8 text-slate-400" />
+      {/* Stats + Search — only when populated */}
+      {documents.length > 0 && (
+        <div className="px-6 mb-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm">
+              <p className="text-[28px] font-extrabold text-slate-800 leading-none">{documents.length}</p>
+              <p className="text-[12px] text-slate-400 font-bold uppercase tracking-wide mt-1">Reports</p>
             </div>
-            <h3 className="text-lg font-bold text-slate-800 tracking-tight">Vault is empty</h3>
-            <p className="text-sm text-slate-500 mt-2 max-w-xs font-medium leading-relaxed mb-6">
-              Upload your first lab report to start tracking your health data intelligently.
+            <div className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm">
+              <p className="text-[28px] font-extrabold text-slate-800 leading-none">{totalMarkers}</p>
+              <p className="text-[12px] text-slate-400 font-bold uppercase tracking-wide mt-1">Biomarkers</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 bg-white rounded-[16px] px-4 py-3 border border-slate-100 shadow-sm text-slate-400">
+            <Search className="w-4 h-4 shrink-0" />
+            <span className="text-[14px] font-medium">Search reports or biomarkers...</span>
+          </div>
+        </div>
+      )}
+
+      <main className="px-6">
+
+        {documents.length === 0 ? (
+          /* Empty state */
+          <div className="flex flex-col items-center text-center mt-4">
+            <div className="w-24 h-24 bg-white border border-slate-100 rounded-[28px] flex items-center justify-center mb-5 shadow-sm">
+              <FolderHeart className="w-10 h-10 text-slate-300" />
+            </div>
+            <h2 className="text-[20px] font-extrabold text-slate-800 tracking-tight">Vault is empty</h2>
+            <p className="text-[14px] text-slate-500 mt-2 max-w-xs font-medium leading-relaxed mb-6">
+              Upload your first lab report to start building your health timeline.
             </p>
             <Link href="/upload">
-              <Button className="bg-slate-800 hover:bg-slate-900 text-white rounded-full px-6 shadow-md transition-all">
-                <Plus className="w-4 h-4 mr-2" />
-                Upload Report
-              </Button>
+              <button className="flex items-center gap-2 bg-[#1A365D] hover:bg-[#12243e] text-white font-bold text-[14px] px-6 py-3.5 rounded-[16px] shadow-md transition-all hover:-translate-y-0.5 active:scale-95">
+                <Plus className="w-4 h-4" />
+                Upload First Report
+              </button>
             </Link>
+
+            {/* Feature explainer */}
+            <div className="mt-10 w-full text-left space-y-3">
+              <p className="text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-4 px-1">
+                What gets stored
+              </p>
+              {[
+                {
+                  icon: FileText,
+                  title: "Original reports",
+                  desc: "Blood tests, lipid profiles, CBC, thyroid panels, scans.",
+                },
+                {
+                  icon: Activity,
+                  title: "Extracted biomarkers",
+                  desc: "Every value is parsed — marker name, result, unit, and flag.",
+                },
+                {
+                  icon: ChevronRight,
+                  title: "Trend history",
+                  desc: "Same biomarker across multiple reports builds your health timeline.",
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm flex items-start gap-4"
+                >
+                  <div className="w-9 h-9 bg-slate-50 rounded-[12px] flex items-center justify-center shrink-0">
+                    <item.icon className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-bold text-slate-800">{item.title}</p>
+                    <p className="text-[12px] text-slate-500 font-medium mt-0.5 leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
-          /* Populated State: The Archival List */
+          /* Populated state */
           <div className="space-y-3">
+            <p className="text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-4 px-1">
+              All Reports
+            </p>
             {documents.map((doc) => (
               <Link key={doc.id} href={`/vault/${doc.id}`} className="block group outline-none">
-                <Card className="border-slate-200/60 shadow-sm bg-white hover:border-slate-300 hover:shadow-md transition-all duration-300">
-                  <CardContent className="p-4 flex items-center justify-between gap-4">
-                    
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className="p-2.5 bg-slate-50 rounded-xl text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors shrink-0">
-                        <FileText className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="text-sm font-bold text-slate-800 truncate group-hover:text-blue-700 transition-colors">
-                          {doc.fileName}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] font-medium text-slate-400">
-                          <span>{format(new Date(doc.createdAt), "MMM d, yyyy")}</span>
-                          <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                          <span>{doc._count.extractedData} markers</span>
-                        </div>
+                <div className="bg-white rounded-[20px] border border-slate-100 shadow-sm hover:border-slate-200 hover:shadow-md transition-all duration-200 p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="p-3 bg-slate-50 rounded-[14px] text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors shrink-0">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-bold text-slate-800 truncate group-hover:text-blue-700 transition-colors">
+                        {doc.fileName}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[12px] font-medium text-slate-400">
+                          {format(new Date(doc.createdAt), "MMM d, yyyy")}
+                        </span>
+                        <span className="w-1 h-1 rounded-full bg-slate-200" />
+                        <span className="text-[12px] font-medium text-slate-400">
+                          {doc._count.extractedData} markers
+                        </span>
                       </div>
                     </div>
-
-                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all shrink-0" />
-                  
-                  </CardContent>
-                </Card>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-200 group-hover:text-slate-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+                </div>
               </Link>
             ))}
+
+            {/* Add more CTA */}
+            <Link href="/upload" className="block mt-2">
+              <div className="flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed border-slate-200 rounded-[20px] text-slate-400 hover:border-slate-300 hover:text-slate-600 hover:bg-white/50 transition-all">
+                <Plus className="w-4 h-4" />
+                <span className="text-[14px] font-semibold">Upload another report</span>
+              </div>
+            </Link>
           </div>
         )}
-      </main>
 
+      </main>
     </div>
   );
 }

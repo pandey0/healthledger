@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageSquareText, Send, Loader2, Activity } from "lucide-react";
+import { Send, Loader2, Sparkles, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-// Import our secure Server Action
 import { queryHealthData } from "@/lib/actions/chat";
 
 type Message = {
@@ -13,103 +11,162 @@ type Message = {
   content: string;
 };
 
+const suggestions = [
+  "What was my last HbA1c?",
+  "Is my cholesterol improving?",
+  "Show my Vitamin D trend",
+  "Any abnormal values recently?",
+];
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
-    { role: "ai", content: "I am ready to query your medical archive. What would you like to know?" }
+    {
+      role: "ai",
+      content:
+        "I have access to your full medical archive. Ask me anything about your biomarkers, trends, or past reports.",
+    },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Auto-scroll to bottom
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
+  const handleSend = async (text?: string) => {
+    const messageText = text ?? input.trim();
+    if (!messageText || isLoading) return;
 
-    const userMessage = input.trim();
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    setMessages((prev) => [...prev, { role: "user", content: messageText }]);
     setIsLoading(true);
 
-    // Call the AI securely through our Server Action
-    const result = await queryHealthData(userMessage);
-
+    const result = await queryHealthData(messageText);
     setIsLoading(false);
 
-    if (result.success && result.text) {
-      setMessages(prev => [...prev, { role: "ai", content: result.text as string }]);
-    } else {
-      setMessages(prev => [...prev, { role: "ai", content: result.error || "An error occurred while querying your data." }]);
-    }
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "ai",
+        content:
+          result.success && result.text
+            ? (result.text as string)
+            : result.error || "Something went wrong. Please try again.",
+      },
+    ]);
   };
 
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSend();
+  };
+
+  const showSuggestions = messages.length <= 1;
+
   return (
-    <div className="flex flex-col h-full animate-in fade-in duration-500 max-w-2xl mx-auto pb-20">
-      
-      {/* Header */}
-      <header className="px-6 pt-8 pb-4 bg-slate-50/80 backdrop-blur-md sticky top-0 z-10">
-        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Intelligence</h1>
-        <p className="text-slate-500 mt-2 font-medium leading-relaxed">
-          Ask precise questions about your historical biomarker data.
-        </p>
+    <div className="flex flex-col h-[100dvh] md:h-screen animate-in fade-in duration-500">
+
+      {/* Sticky Header */}
+      <header className="px-6 pt-10 pb-4 bg-[#F4F3F0]/90 backdrop-blur-md sticky top-0 z-10 border-b border-slate-100/60 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-[#1A365D] rounded-[12px] flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-[20px] font-extrabold text-slate-800 tracking-tight leading-none">Ledger AI</h1>
+            <p className="text-[12px] text-slate-400 font-medium mt-0.5">Your personal health intelligence</p>
+          </div>
+        </div>
       </header>
 
-      {/* Chat History */}
-      <main className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+      {/* Messages area */}
+      <main className="flex-1 overflow-y-auto px-6 py-5 space-y-5 pb-6">
+
         {messages.map((msg, index) => (
-          <div key={index} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
-            
+          <div
+            key={index}
+            className={`flex items-end gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+          >
             {msg.role === "ai" && (
-              <div className="flex items-center gap-2 mb-1.5 text-slate-400">
-                <Activity className="w-4 h-4" />
-                <span className="text-[11px] font-bold uppercase tracking-wider">Ledger AI</span>
+              <div className="w-7 h-7 bg-[#1A365D] rounded-[10px] flex items-center justify-center shrink-0 mb-0.5">
+                <Sparkles className="w-3.5 h-3.5 text-white" />
               </div>
             )}
 
-            <div className={`px-5 py-3.5 max-w-[85%] text-[15px] leading-relaxed font-medium ${
-              msg.role === "user" 
-                ? "bg-slate-800 text-white rounded-2xl rounded-tr-sm shadow-sm" 
-                : "bg-white border border-slate-200/60 text-slate-700 rounded-2xl rounded-tl-sm shadow-sm"
-            }`}>
+            <div
+              className={`px-4 py-3.5 max-w-[80%] text-[15px] leading-relaxed font-medium shadow-sm ${
+                msg.role === "user"
+                  ? "bg-[#1A365D] text-white rounded-[20px] rounded-br-[6px]"
+                  : "bg-white border border-slate-100 text-slate-700 rounded-[20px] rounded-bl-[6px]"
+              }`}
+            >
               {msg.content}
             </div>
 
+            {msg.role === "user" && (
+              <div className="w-7 h-7 bg-slate-200 rounded-[10px] flex items-center justify-center shrink-0 mb-0.5">
+                <User className="w-3.5 h-3.5 text-slate-500" />
+              </div>
+            )}
           </div>
         ))}
-        
+
+        {/* Loading bubble */}
         {isLoading && (
-          <div className="flex flex-col items-start">
-             <div className="flex items-center gap-2 mb-1.5 text-slate-400">
-                <Activity className="w-4 h-4" />
-                <span className="text-[11px] font-bold uppercase tracking-wider">Ledger AI</span>
+          <div className="flex items-end gap-2.5 justify-start">
+            <div className="w-7 h-7 bg-[#1A365D] rounded-[10px] flex items-center justify-center shrink-0 mb-0.5">
+              <Sparkles className="w-3.5 h-3.5 text-white" />
+            </div>
+            <div className="px-5 py-4 bg-white border border-slate-100 rounded-[20px] rounded-bl-[6px] shadow-sm">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-2 h-2 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-2 h-2 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: "300ms" }} />
               </div>
-            <div className="px-5 py-4 bg-white border border-slate-200/60 rounded-2xl rounded-tl-sm shadow-sm">
-              <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
             </div>
           </div>
         )}
+
+        {/* Suggestion chips — only on first load */}
+        {showSuggestions && !isLoading && (
+          <div className="pt-2">
+            <p className="text-[12px] font-bold text-slate-400 uppercase tracking-wider mb-3">Try asking</p>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleSend(s)}
+                  className="px-4 py-2 bg-white border border-slate-200 text-slate-600 text-[13px] font-semibold rounded-full shadow-sm hover:border-[#1A365D]/40 hover:text-[#1A365D] hover:bg-blue-50 transition-all active:scale-95"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </main>
 
-      {/* Input Area */}
-      <div className="fixed bottom-16 md:bottom-20 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-slate-200/60 z-20">
-        <form onSubmit={handleSend} className="max-w-2xl mx-auto relative flex items-center">
-          <Input 
+      {/* Input bar — pinned to bottom, above mobile nav */}
+      <div className="shrink-0 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-white/95 backdrop-blur-xl border-t border-slate-100 md:pb-4 mb-[72px] md:mb-0">
+        <form
+          onSubmit={handleFormSubmit}
+          className="flex items-center gap-2 max-w-3xl mx-auto"
+        >
+          <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="e.g., Show my last HbA1c..."
-            className="w-full h-14 pl-5 pr-14 bg-slate-50 border-slate-200 text-base font-medium rounded-2xl focus-visible:ring-slate-300 shadow-sm"
+            className="flex-1 h-12 pl-5 pr-4 bg-slate-50 border-slate-200 text-[15px] font-medium rounded-[16px] focus-visible:ring-1 focus-visible:ring-[#1A365D]/30 shadow-sm"
             disabled={isLoading}
           />
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={!input.trim() || isLoading}
             size="icon"
-            className="absolute right-2 h-10 w-10 bg-slate-800 hover:bg-slate-900 text-white rounded-xl shadow-md transition-all disabled:opacity-50"
+            className="h-12 w-12 bg-[#1A365D] hover:bg-[#12243e] text-white rounded-[16px] shadow-md transition-all disabled:opacity-40 shrink-0"
           >
             <Send className="w-4 h-4 ml-0.5" />
           </Button>
