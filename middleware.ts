@@ -7,6 +7,11 @@ const { auth } = NextAuth(authConfig);
 
 // We explicitly export the middleware function here
 export default auth((req) => {
+  // AUTH DISABLED FOR DEVELOPMENT — re-enable by removing this early return
+  if (process.env.NODE_ENV === "development") {
+    return NextResponse.next();
+  }
+
   const isLoggedIn = !!req.auth;
   const { pathname } = req.nextUrl;
 
