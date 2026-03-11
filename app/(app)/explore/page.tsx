@@ -45,10 +45,10 @@ export default function ExplorePage() {
           <div className="w-9 h-9 rounded-[12px] bg-gradient-to-br from-[#0F1F3D] to-[#1A365D] flex items-center justify-center shadow-sm">
             <Compass className="w-4.5 h-4.5 text-teal-400" />
           </div>
-          <h1 className="text-[26px] font-extrabold text-slate-900 tracking-tight">Explore</h1>
+          <h1 className="text-[26px] font-extrabold text-slate-900 tracking-tight">Explore HealthLedger</h1>
         </div>
         <p className="text-[13px] text-slate-400 font-medium leading-relaxed">
-          Expanding features to support your complete health journey.
+          Coming soon features to complete your health journey.
         </p>
       </header>
 

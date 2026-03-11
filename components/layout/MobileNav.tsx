@@ -14,7 +14,7 @@ export default function MobileNav() {
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-50">
       {/* Frosted glass bar */}
-      <div className="bg-white/95 backdrop-blur-xl border-t border-slate-100/80 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pt-2 pb-7 px-4">
+      <div className="bg-white/95 backdrop-blur-xl border-t border-slate-100/60 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pt-2.5 pb-8 px-4">
         <div className="flex items-center justify-between max-w-sm mx-auto relative">
 
           <NavItem href="/home" label="Home" icon={Home} active={pathname === "/home"} />
@@ -49,7 +49,7 @@ function NavItem({
 }) {
   return (
     <Link href={href} className="flex flex-col items-center gap-1 p-2 w-14 outline-none group">
-      <div className={`w-9 h-9 rounded-[12px] flex items-center justify-center transition-all ${
+      <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center transition-all ${
         active ? "bg-[#0F1F3D] shadow-md" : "group-hover:bg-slate-100"
       }`}>
         <Icon

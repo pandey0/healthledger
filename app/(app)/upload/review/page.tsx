@@ -86,7 +86,7 @@ export default function ReviewPage() {
   ).length;
 
   return (
-    <div className="flex flex-col animate-in slide-in-from-right-4 duration-500 pb-40">
+    <div className="flex flex-col animate-in slide-in-from-right-4 duration-500 pb-44 md:pb-40">
 
       {/* Header */}
       <header className="px-6 pt-8 pb-5 sticky top-0 z-10 bg-[#F4F3F0]/95 backdrop-blur-md">
@@ -207,7 +207,7 @@ export default function ReviewPage() {
       </main>
 
       {/* Floating confirm bar */}
-      <div className="fixed bottom-0 inset-x-0 z-20 bg-white/95 backdrop-blur-xl border-t border-slate-100 px-6 pt-4 pb-6 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+      <div className="fixed bottom-0 inset-x-0 z-20 bg-white/95 backdrop-blur-xl border-t border-slate-100 px-6 pt-4 pb-8 md:pb-6 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
         <div className="max-w-3xl mx-auto space-y-3">
           <button
             onClick={handleConfirm}
