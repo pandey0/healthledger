@@ -19,22 +19,19 @@ export default async function HomePage() {
   const firstName = session?.user?.name?.split(" ")[0] || "there";
   const today = format(new Date(), "EEEE, MMMM do");
 
-  if (!userId) return null;
-
-  // 1. Fetch the latest document to show the "Recent Upload" date
-  const latestDoc = await prisma.document.findFirst({
+  // In development with no session, show the UI with empty data
+  const latestDoc = userId ? await prisma.document.findFirst({
     where: { userId },
     orderBy: { createdAt: "desc" },
-  });
+  }) : null;
 
-  // 2. Fetch the most recent anomaly (case-insensitive flag check for 'high' or 'low')
-  const recentAnomaly = await prisma.extractedData.findFirst({
+  const recentAnomaly = userId ? await prisma.extractedData.findFirst({
     where: { 
       userId, 
       flag: { in: ["high", "low", "High", "Low"] } 
     },
     orderBy: { testDate: "desc" },
-  });
+  }) : null;
 
   // Future integration placeholders
   const lastPathDate = "No history"; 

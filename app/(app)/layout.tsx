@@ -10,7 +10,8 @@ export default async function AppLayout({
 }) {
   const session = await auth();
 
-  if (!session?.user) {
+  // AUTH BYPASSED FOR DEVELOPMENT — remove this block to re-enable
+  if (process.env.NODE_ENV !== "development" && !session?.user) {
     redirect("/");
   }
 
