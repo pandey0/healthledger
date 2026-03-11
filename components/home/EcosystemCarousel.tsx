@@ -61,7 +61,7 @@ export default function EcosystemCarousel() {
     <div>
       <div
         ref={scrollRef}
-        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1 -mx-6 px-6"
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-1 -mx-6 px-6 [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {slides.map((slide) => (
