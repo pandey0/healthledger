@@ -14,7 +14,8 @@ export default function MobileNav() {
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-50">
       {/* Frosted glass bar */}
-      <div className="bg-white/95 backdrop-blur-xl border-t border-slate-100/60 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pt-2.5 pb-8 px-4">
+      <div className="bg-white/95 backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pt-2.5 pb-8 px-4 relative">
+        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-slate-200/80 to-transparent" />
         <div className="flex items-center justify-between max-w-sm mx-auto relative">
 
           <NavItem href="/home" label="Home" icon={Home} active={pathname === "/home"} />
