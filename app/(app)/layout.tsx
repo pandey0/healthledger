@@ -1,8 +1,9 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Home, FolderHeart, MessageSquareText, Plus, User, Activity, FlaskConical, Stethoscope, ShoppingBag } from "lucide-react";
+import { Plus, User, Activity, FlaskConical, Stethoscope, ShoppingBag } from "lucide-react";
 import MobileNav from "@/components/layout/MobileNav";
+import NavLinks from "@/components/layout/NavLinks";
 
 export default async function AppLayout({
   children,
@@ -31,18 +32,7 @@ export default async function AppLayout({
 
         <nav className="flex-1 flex flex-col gap-1 p-4 overflow-y-auto">
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-3 mt-2">Menu</p>
-          <Link href="/home" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:text-[#1A365D] hover:bg-slate-50 transition-colors group">
-            <Home className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            <span className="font-semibold text-[15px]">Home</span>
-          </Link>
-          <Link href="/vault" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:text-[#1A365D] hover:bg-slate-50 transition-colors group">
-            <FolderHeart className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            <span className="font-semibold text-[15px]">Medical Vault</span>
-          </Link>
-          <Link href="/chat" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:text-[#1A365D] hover:bg-slate-50 transition-colors group">
-            <MessageSquareText className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            <span className="font-semibold text-[15px]">AI Assistant</span>
-          </Link>
+          <NavLinks />
 
           <div className="mt-4 mb-1">
             <div className="h-px bg-slate-100 mb-3" />

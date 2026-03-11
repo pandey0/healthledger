@@ -51,6 +51,28 @@ npx prisma generate       # regenerate the Prisma client
 npx prisma migrate deploy # apply pending migrations
 ```
 
+## Design System
+
+- **Primary brand color**: `#1A365D` (dark navy) — used directly as Tailwind arbitrary value AND as the `--primary` CSS variable (`oklch(0.295 0.079 245)`)
+- **Background**: `#F4F3F0` warm off-white
+- **Card radius**: `rounded-[20px]` (20px) — set as default in `components/ui/card.tsx`
+- **Button radius**: `rounded-[14px]` (14px) — set as default in `components/ui/button.tsx`
+- **Base radius**: `--radius: 0.875rem` (14px) — drives all `rounded-sm/md/lg/xl` tokens
+- **Status colors**: emerald = normal, amber = borderline/high, red = low/abnormal
+- **Reference ranges**: `lib/referenceRanges.ts` — 60+ biomarkers, used in vault detail, marker pages, and upload review
+
+## Component Architecture
+
+- `components/layout/MobileNav.tsx` — Mobile bottom nav (client, hides on `/chat`)
+- `components/layout/NavLinks.tsx` — Sidebar nav with active state (client, uses `usePathname`)
+- `components/vault/TrendGraph.tsx` — Recharts line graph with reference band and color-coded dots
+- `components/ui/` — shadcn primitives customized to HealthLedger design system
+
+## Auth Notes
+
+- Auth bypass active for development: `process.env.NODE_ENV !== "development"` check in `app/(app)/layout.tsx` AND `middleware.ts`
+- Remove both checks before deploying to production
+
 ## Replit Notes
 
 - Port 5000 with `0.0.0.0` host binding is required for Replit's preview pane
