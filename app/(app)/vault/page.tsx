@@ -1,16 +1,22 @@
 import Link from "next/link";
-import { format } from "date-fns";
-import { FileText, ChevronRight, Activity, Plus, FolderHeart, Search } from "lucide-react";
+import { Plus, FolderHeart, FileText, Activity, ChevronRight, Search } from "lucide-react";
 import { getUserDocuments } from "@/lib/dal/vault";
+import VaultContent from "@/components/vault/VaultContent";
 
 export default async function VaultPage() {
   const documents = await getUserDocuments();
-  const totalMarkers = documents.reduce((acc, d) => acc + d._count.extractedData, 0);
+
+  const serialized = documents.map((d) => ({
+    id: d.id,
+    fileName: d.fileName,
+    createdAt: d.createdAt.toISOString(),
+    _count: d._count,
+    extractedData: d.extractedData,
+  }));
 
   return (
     <div className="flex flex-col animate-in fade-in duration-700 pb-12">
 
-      {/* Header */}
       <header className="px-6 pt-10 pb-5">
         <h1 className="text-[32px] font-extrabold text-slate-800 tracking-tight">Medical Vault</h1>
         <p className="text-slate-500 mt-1 font-medium text-[14px]">
@@ -18,19 +24,8 @@ export default async function VaultPage() {
         </p>
       </header>
 
-      {/* Stats + Search — only when populated */}
       {documents.length > 0 && (
-        <div className="px-6 mb-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm">
-              <p className="text-[28px] font-extrabold text-slate-800 leading-none">{documents.length}</p>
-              <p className="text-[12px] text-slate-400 font-bold uppercase tracking-wide mt-1">Reports</p>
-            </div>
-            <div className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm">
-              <p className="text-[28px] font-extrabold text-slate-800 leading-none">{totalMarkers}</p>
-              <p className="text-[12px] text-slate-400 font-bold uppercase tracking-wide mt-1">Biomarkers</p>
-            </div>
-          </div>
+        <div className="px-6 mb-2">
           <div className="flex items-center gap-3 bg-white rounded-[16px] px-4 py-3 border border-slate-100 shadow-sm text-slate-400">
             <Search className="w-4 h-4 shrink-0" />
             <span className="text-[14px] font-medium">Search reports or biomarkers...</span>
@@ -38,11 +33,9 @@ export default async function VaultPage() {
         </div>
       )}
 
-      <main className="px-6">
-
+      <main>
         {documents.length === 0 ? (
-          /* Empty state */
-          <div className="flex flex-col items-center text-center mt-4">
+          <div className="px-6 flex flex-col items-center text-center mt-4">
             <div className="w-24 h-24 bg-white border border-slate-100 rounded-[28px] flex items-center justify-center mb-5 shadow-sm">
               <FolderHeart className="w-10 h-10 text-slate-300" />
             </div>
@@ -57,7 +50,6 @@ export default async function VaultPage() {
               </button>
             </Link>
 
-            {/* Feature explainer */}
             <div className="mt-10 w-full text-left space-y-3">
               <p className="text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-4 px-1">
                 What gets stored
@@ -97,48 +89,19 @@ export default async function VaultPage() {
             </div>
           </div>
         ) : (
-          /* Populated state */
-          <div className="space-y-3">
-            <p className="text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-4 px-1">
-              All Reports
-            </p>
-            {documents.map((doc) => (
-              <Link key={doc.id} href={`/vault/${doc.id}`} className="block group outline-none">
-                <div className="bg-white rounded-[20px] border border-slate-100 shadow-sm hover:border-slate-200 hover:shadow-md transition-all duration-200 p-4 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="p-3 bg-slate-50 rounded-[14px] text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors shrink-0">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[15px] font-bold text-slate-800 truncate group-hover:text-blue-700 transition-colors">
-                        {doc.fileName}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[12px] font-medium text-slate-400">
-                          {format(new Date(doc.createdAt), "MMM d, yyyy")}
-                        </span>
-                        <span className="w-1 h-1 rounded-full bg-slate-200" />
-                        <span className="text-[12px] font-medium text-slate-400">
-                          {doc._count.extractedData} markers
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-slate-200 group-hover:text-slate-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+          <>
+            <VaultContent documents={serialized} />
+
+            <div className="px-6 mt-2">
+              <Link href="/upload" className="block">
+                <div className="flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed border-slate-200 rounded-[20px] text-slate-400 hover:border-slate-300 hover:text-slate-600 hover:bg-white/50 transition-all">
+                  <Plus className="w-4 h-4" />
+                  <span className="text-[14px] font-semibold">Upload another report</span>
                 </div>
               </Link>
-            ))}
-
-            {/* Add more CTA */}
-            <Link href="/upload" className="block mt-2">
-              <div className="flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed border-slate-200 rounded-[20px] text-slate-400 hover:border-slate-300 hover:text-slate-600 hover:bg-white/50 transition-all">
-                <Plus className="w-4 h-4" />
-                <span className="text-[14px] font-semibold">Upload another report</span>
-              </div>
-            </Link>
-          </div>
+            </div>
+          </>
         )}
-
       </main>
     </div>
   );

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import {
   Activity, Plus, TrendingUp, FlaskConical, Stethoscope,
   ShoppingBag, MessageSquareText, AlertCircle, CheckCircle,
-  ArrowRight, ChevronRight, Clock, Sparkles, FolderHeart, Zap,
+  ArrowRight, ChevronRight, Clock, Sparkles, Zap,
 } from "lucide-react";
 
 export default async function HomePage() {
@@ -17,14 +17,13 @@ export default async function HomePage() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const today = format(new Date(), "EEEE, MMMM do");
 
-  const [latestDoc, recentAnomaly, docCount, markerCount] = userId
+  const [latestDoc, recentAnomaly, docCount] = userId
     ? await Promise.all([
         prisma.document.findFirst({ where: { userId }, orderBy: { createdAt: "desc" } }),
         prisma.extractedData.findFirst({ where: { userId, flag: { in: ["high", "low", "High", "Low"] } }, orderBy: { testDate: "desc" } }),
         prisma.document.count({ where: { userId } }),
-        prisma.extractedData.count({ where: { userId } }),
       ])
-    : [null, null, 0, 0];
+    : [null, null, 0];
 
   const isEmpty = docCount === 0;
   const daysSinceUpload = latestDoc
@@ -115,23 +114,6 @@ export default async function HomePage() {
           </>
         ) : (
           <>
-            {/* Stats row */}
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: "Reports",    value: docCount,               from: "from-cyan-500",   to: "to-teal-600",   icon: FolderHeart },
-                { label: "Biomarkers", value: markerCount,            from: "from-violet-500", to: "to-purple-600", icon: Activity },
-                { label: "Trends",     value: docCount > 1 ? "Live" : "—", from: "from-amber-400", to: "to-orange-500", icon: TrendingUp },
-              ].map((stat) => (
-                <div key={stat.label} className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm">
-                  <div className={`w-9 h-9 rounded-[12px] bg-gradient-to-br ${stat.from} ${stat.to} flex items-center justify-center mb-2 shadow-sm`}>
-                    <stat.icon className="w-4 h-4 text-white" />
-                  </div>
-                  <p className="text-[22px] font-extrabold text-slate-900 leading-none">{stat.value}</p>
-                  <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-
             {/* Anomaly / All-clear card */}
             {recentAnomaly ? (
               <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-[28px] p-6 shadow-lg shadow-amber-500/25 relative overflow-hidden">

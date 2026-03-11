@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Home, FolderHeart, MessageSquareText, Plus, LayoutGrid } from "lucide-react";
+import { Home, FolderHeart, MessageSquareText, Plus, Compass } from "lucide-react";
 
 export default function MobileNav() {
   const pathname = usePathname();
@@ -28,7 +28,7 @@ export default function MobileNav() {
           </Link>
 
           <NavItem href="/chat" label="AI" icon={MessageSquareText} active={pathname === "/chat"} />
-          <NavItem href="/lab" label="Explore" icon={LayoutGrid} active={isExplore} />
+          <NavItem href="/lab" label="Explore" icon={Compass} active={isExplore} />
 
         </div>
       </div>

@@ -24,6 +24,10 @@ export const getUserDocuments = cache(async () => {
       include: {
         _count: {
           select: { extractedData: true }
+        },
+        extractedData: {
+          where: { flag: { in: ['high', 'low', 'High', 'Low'] } },
+          select: { id: true }
         }
       }
     });
