@@ -11,9 +11,9 @@ const coreLinks = [
 ];
 
 const ecosystemLinks = [
-  { href: "/lab",     label: "Book Lab Tests", icon: FlaskConical,  color: "text-cyan-400",    badge: "Beta" },
-  { href: "/doctors", label: "Find Doctors",   icon: Stethoscope,   color: "text-emerald-400", badge: "Beta" },
-  { href: "/store",   label: "Health Store",   icon: ShoppingBag,   color: "text-violet-400",  badge: "Beta" },
+  { href: "/lab",     label: "Book Lab Tests", icon: FlaskConical,  color: "text-cyan-400",    badge: "Beta", explorePath: "/explore/lab" },
+  { href: "/doctors", label: "Find Doctors",   icon: Stethoscope,   color: "text-emerald-400", badge: "Beta", explorePath: "/explore/doctors" },
+  { href: "/store",   label: "Health Store",   icon: ShoppingBag,   color: "text-violet-400",  badge: "Beta", explorePath: "/explore/store" },
 ];
 
 export default function NavLinks({ section = "core" }: { section?: "core" | "ecosystem" }) {
@@ -22,8 +22,8 @@ export default function NavLinks({ section = "core" }: { section?: "core" | "eco
 
   return (
     <>
-      {links.map(({ href, label, icon: Icon, color, badge }) => {
-        const active = pathname === href || (href !== "/home" && pathname.startsWith(href));
+      {links.map(({ href, label, icon: Icon, color, badge, explorePath }) => {
+        const active = pathname === href || (href !== "/home" && pathname.startsWith(href)) || (explorePath && pathname === explorePath);
         return (
           <Link
             key={href}

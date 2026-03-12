@@ -9,7 +9,7 @@ export default function MobileNav() {
 
   if (pathname === "/chat" || pathname.startsWith("/upload/review")) return null;
 
-  const isExplore = ["/explore", "/lab", "/doctors", "/store"].some(p => pathname.startsWith(p));
+  const isExplore = ["/explore", "/explore/lab", "/explore/doctors", "/explore/store", "/lab", "/doctors", "/store"].some(p => pathname.startsWith(p));
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-50">
