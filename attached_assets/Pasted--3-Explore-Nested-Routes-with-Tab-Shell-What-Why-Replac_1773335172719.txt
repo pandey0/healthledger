@@ -1,0 +1,38 @@
+#3 - Explore Nested Routes with Tab Shell
+What & Why
+Replace the current simple /explore card list with a proper nested layout. /explore becomes a parent shell that renders a sticky tab bar (Lab Tests · Doctors · Store), and each section is its own independent page at /explore/lab, /explore/doctors, /explore/store. The explore layout wraps all three child pages so navigating between tabs feels seamless and instant. The default landing is /explore/lab.
+
+The existing standalone /lab, /doctors, /store pages are left unchanged — they remain accessible from the desktop sidebar.
+
+Done looks like
+Navigating to /explore redirects to /explore/lab
+A sticky tab bar appears at the top with three tabs: Lab Tests (teal), Doctors (emerald), Store (violet). The active tab has a filled pill with its accent color. Inactive tabs are muted.
+/explore/lab is an independent page showing partner labs, popular tests, and feature highlights — same content as the current /lab page but without the back arrow header (tab bar replaces navigation)
+/explore/doctors is an independent page with specialty chips and doctor cards — same content as /doctors without back arrow
+/explore/store is an independent page with categories and featured products — same content as /store without back arrow
+The mobile nav Explore tab (already pointing to /explore) naturally lands on Lab Tests by default
+The tab bar is active-state aware using usePathname, highlighting the correct tab on each route
+Out of scope
+Any changes to the existing /lab, /doctors, /store pages
+Real booking/purchase/consultation flows
+Desktop sidebar link changes
+Tasks
+Create explore layout — Add app/(app)/explore/layout.tsx as a client component. It renders a sticky tab bar with three tabs linking to /explore/lab, /explore/doctors, /explore/store. Uses usePathname for active-state highlighting. Wraps {children} below the tab bar. This is the only navigation chrome; no back arrow needed inside the child pages.
+
+Create /explore/lab page — app/(app)/explore/lab/page.tsx — same content as the existing /lab/page.tsx (partners grid, popular tests list, features) but without the hero gradient section and back-arrow navigation. Starts directly with the content sections.
+
+Create /explore/doctors page — app/(app)/explore/doctors/page.tsx — same content as the existing /doctors/page.tsx (specialties grid, doctor cards, share-timeline callout) without the hero and back arrow.
+
+Create /explore/store page — app/(app)/explore/store/page.tsx — same content as the existing /store/page.tsx (categories grid, featured products, AI picks) without the hero and back arrow.
+
+Redirect /explore to /explore/lab — Update app/(app)/explore/page.tsx to do a Next.js redirect("/explore/lab") so that /explore always lands on the first tab.
+
+Update MobileNav and NavLinks active states — The mobile nav Explore tab currently activates on /explore, /lab, /doctors, /store. Add /explore/lab, /explore/doctors, /explore/store to that list. Update NavLinks.tsx ecosystem links so /explore/lab, /explore/doctors, /explore/store also trigger active state for their respective sidebar entries.
+
+Relevant files
+app/(app)/explore/page.tsx
+app/(app)/lab/page.tsx
+app/(app)/doctors/page.tsx
+app/(app)/store/page.tsx
+components/layout/MobileNav.tsx
+components/layout/NavLinks.tsx
