@@ -6,7 +6,7 @@ import { FlaskConical, Stethoscope, ShoppingBag, ArrowRight } from "lucide-react
 
 const slides = [
   {
-    href: "/lab",
+    href: "/explore/lab",
     icon: FlaskConical,
     title: "Book Lab Tests",
     subtitle: "Home collection from partner labs",
@@ -16,7 +16,7 @@ const slides = [
     badgeBg: "bg-white/20",
   },
   {
-    href: "/doctors",
+    href: "/explore/doctors",
     icon: Stethoscope,
     title: "Consult Doctors",
     subtitle: "500+ specialists, same-day slots",
@@ -26,7 +26,7 @@ const slides = [
     badgeBg: "bg-white/20",
   },
   {
-    href: "/store",
+    href: "/explore/store",
     icon: ShoppingBag,
     title: "Health Store",
     subtitle: "AI-curated supplements & devices",

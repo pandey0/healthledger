@@ -132,7 +132,7 @@ export default async function HomePage() {
                   </div>
                 </div>
                 <div className="flex gap-3 mt-5 relative z-10">
-                  <Link href="/doctors" className="flex-1 bg-white text-amber-700 text-[13px] font-bold py-2.5 rounded-[14px] transition-colors shadow-sm text-center hover:bg-amber-50">
+                  <Link href="/explore/doctors" className="flex-1 bg-white text-amber-700 text-[13px] font-bold py-2.5 rounded-[14px] transition-colors shadow-sm text-center hover:bg-amber-50">
                     Consult Doctor
                   </Link>
                   <Link href="/vault" className="flex-1 bg-white/20 hover:bg-white/30 text-white text-[13px] font-bold py-2.5 rounded-[14px] transition-colors text-center">
