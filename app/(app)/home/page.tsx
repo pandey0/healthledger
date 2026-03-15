@@ -6,10 +6,11 @@ import {
   Activity, Plus, TrendingUp,
   MessageSquareText, AlertTriangle, CheckCircle2,
   ArrowRight, ChevronRight, Clock, Sparkles, Zap,
-  ArrowUpRight, ArrowDownRight,
+  ArrowUpRight, ArrowDownRight, Settings,
 } from "lucide-react";
 import EcosystemCarousel from "@/components/home/EcosystemCarousel";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
+import TourStarter from "@/components/onboarding/TourStarter";
 
 export default async function HomePage() {
   const session = await auth();
@@ -55,11 +56,18 @@ export default async function HomePage() {
 
       {/* Greeting header */}
       <header className="px-6 pt-10 pb-6">
-        <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{today}</p>
-        <h1 className="text-[30px] font-extrabold text-slate-900 tracking-tight leading-tight">
-          {greeting},{" "}
-          <span className="bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">{firstName}.</span>
-        </h1>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{today}</p>
+            <h1 className="text-[30px] font-extrabold text-slate-900 tracking-tight leading-tight">
+              {greeting},{" "}
+              <span className="bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">{firstName}.</span>
+            </h1>
+          </div>
+          <Link href="/settings" className="w-9 h-9 bg-white border border-slate-100 shadow-sm rounded-[12px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:border-slate-200 transition-all mt-1 shrink-0">
+            <Settings className="w-4 h-4" />
+          </Link>
+        </div>
       </header>
 
       <main className="px-6 space-y-6">
@@ -81,12 +89,15 @@ export default async function HomePage() {
                 <p className="text-[13px] text-blue-200 font-medium leading-relaxed mb-5">
                   Upload your first lab report. We&apos;ll extract every biomarker, build your health timeline, and guide you forward.
                 </p>
-                <Link href="/upload">
-                  <button className="flex items-center gap-2 bg-gradient-to-r from-teal-400 to-cyan-500 text-white font-bold text-[14px] px-5 py-3 rounded-[14px] shadow-lg shadow-teal-500/30 hover:from-teal-300 hover:to-cyan-400 transition-all active:scale-95">
-                    <Plus className="w-4 h-4" />
-                    Upload First Report
-                  </button>
-                </Link>
+                <div className="flex items-center gap-4">
+                  <Link href="/upload">
+                    <button className="flex items-center gap-2 bg-gradient-to-r from-teal-400 to-cyan-500 text-white font-bold text-[14px] px-5 py-3 rounded-[14px] shadow-lg shadow-teal-500/30 hover:from-teal-300 hover:to-cyan-400 transition-all active:scale-95">
+                      <Plus className="w-4 h-4" />
+                      Upload First Report
+                    </button>
+                  </Link>
+                  <TourStarter isEmpty={isEmpty} />
+                </div>
               </div>
             </div>
 
