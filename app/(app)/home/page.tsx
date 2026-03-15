@@ -11,8 +11,7 @@ import {
 import EcosystemCarousel from "@/components/home/EcosystemCarousel";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import TourStarter from "@/components/onboarding/TourStarter";
-import { TRACKER_META, FREQUENCY_LABELS } from "@/lib/actions/health";
-import type { MedFrequency } from "@/lib/actions/health";
+import { TRACKER_META, FREQUENCY_LABELS, type MedFrequency } from "@/lib/health-constants";
 
 // ─── Medication reminder hint ────────────────────────────────────────────────
 

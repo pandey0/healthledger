@@ -9,14 +9,13 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { updateUserProfile } from "@/lib/actions/user";
+import { saveHealthTrackers, saveMedications } from "@/lib/actions/health";
 import {
-  saveHealthTrackers,
-  saveMedications,
   type TrackerParamType,
   type MedFrequency,
   type MedicationPayload,
   FREQUENCY_LABELS,
-} from "@/lib/actions/health";
+} from "@/lib/health-constants";
 
 const STORAGE_KEY = "hl_onboarding_done";
 

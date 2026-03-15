@@ -10,10 +10,12 @@ import { toast } from "sonner";
 import { updateUserProfile } from "@/lib/actions/user";
 import {
   toggleTracker, addMedication, updateMedication, deactivateMedication,
-  type TrackerParamType, TRACKER_META,
+} from "@/lib/actions/health";
+import {
+  type TrackerParamType,
   type MedFrequency, FREQUENCY_LABELS, ALL_FREQUENCIES,
   type MedicationPayload,
-} from "@/lib/actions/health";
+} from "@/lib/health-constants";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

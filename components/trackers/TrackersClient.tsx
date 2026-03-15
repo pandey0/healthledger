@@ -10,9 +10,11 @@ import { toast } from "sonner";
 import {
   logReading, deleteReading,
   addMedication, updateMedication, deactivateMedication,
+} from "@/lib/actions/health";
+import {
   type MedFrequency, FREQUENCY_LABELS, ALL_FREQUENCIES,
   type MedicationPayload,
-} from "@/lib/actions/health";
+} from "@/lib/health-constants";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 

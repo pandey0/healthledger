@@ -3,39 +3,16 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import {
+  TRACKER_META, ALL_PARAM_TYPES,
+  type TrackerParamType, type MedFrequency, type MedicationPayload,
+} from "@/lib/health-constants";
 
-// ─── Tracker catalogue (shared with UI) ──────────────────────────────────────
-
-export type TrackerParamType =
-  | "blood_pressure"
-  | "blood_sugar"
-  | "weight"
-  | "heart_rate"
-  | "spo2"
-  | "temperature"
-  | "hba1c";
-
-export const TRACKER_META: Record<
-  TrackerParamType,
-  { label: string; unit: string; emoji: string; desc: string; placeholder: string }
-> = {
-  blood_pressure: { label: "Blood Pressure",  unit: "mmHg", emoji: "🫀", desc: "Systolic / Diastolic",      placeholder: "e.g. 120/80" },
-  blood_sugar:    { label: "Blood Sugar",      unit: "mg/dL",emoji: "🩸", desc: "Fasting or random glucose", placeholder: "e.g. 95"     },
-  weight:         { label: "Body Weight",      unit: "kg",   emoji: "⚖️",  desc: "Daily or weekly weigh-in", placeholder: "e.g. 72.5"   },
-  heart_rate:     { label: "Heart Rate",       unit: "bpm",  emoji: "💓", desc: "Resting pulse",             placeholder: "e.g. 72"     },
-  spo2:           { label: "Oxygen (SpO₂)",    unit: "%",    emoji: "🫁", desc: "Blood oxygen saturation",   placeholder: "e.g. 98"     },
-  temperature:    { label: "Temperature",      unit: "°C",   emoji: "🌡️", desc: "Body temperature",          placeholder: "e.g. 37.2"   },
-  hba1c:          { label: "HbA1c",            unit: "%",    emoji: "📊", desc: "Glycated haemoglobin",      placeholder: "e.g. 5.7"    },
-};
-
-const ALL_PARAM_TYPES = Object.keys(TRACKER_META) as TrackerParamType[];
+// Re-export types so callers that need both actions + types can import one place
+export type { TrackerParamType, MedFrequency, MedicationPayload };
 
 // ─── Tracker actions ──────────────────────────────────────────────────────────
 
-/**
- * Onboarding bulk-save: sets exactly the chosen trackers as active,
- * deactivates the rest. Safe to call repeatedly.
- */
 export async function saveHealthTrackers(paramTypes: TrackerParamType[]) {
   try {
     const session = await auth();
@@ -61,10 +38,6 @@ export async function saveHealthTrackers(paramTypes: TrackerParamType[]) {
   }
 }
 
-/**
- * Toggle a single tracker on or off by paramType.
- * Creates the tracker record if it doesn't exist yet.
- */
 export async function toggleTracker(paramType: TrackerParamType, isActive: boolean) {
   try {
     const session = await auth();
@@ -135,38 +108,8 @@ export async function deleteReading(readingId: string) {
   }
 }
 
-// ─── Medication types ─────────────────────────────────────────────────────────
-
-export type MedFrequency =
-  | "once_daily"
-  | "twice_daily"
-  | "thrice_daily"
-  | "four_times_daily"
-  | "as_needed"
-  | "weekly";
-
-export const FREQUENCY_LABELS: Record<MedFrequency, string> = {
-  once_daily:       "Once daily",
-  twice_daily:      "Twice daily",
-  thrice_daily:     "Three times daily",
-  four_times_daily: "Four times daily",
-  as_needed:        "As needed",
-  weekly:           "Weekly",
-};
-
-export const ALL_FREQUENCIES = Object.keys(FREQUENCY_LABELS) as MedFrequency[];
-
-export type MedicationPayload = {
-  name:       string;
-  dosage:     string;
-  frequency:  MedFrequency;
-  notes?:     string;
-  startDate?: string;
-};
-
 // ─── Medication actions ───────────────────────────────────────────────────────
 
-/** Onboarding batch create — only adds, never deduplicates */
 export async function saveMedications(medications: MedicationPayload[]) {
   try {
     const session = await auth();
@@ -195,7 +138,6 @@ export async function saveMedications(medications: MedicationPayload[]) {
   }
 }
 
-/** Add a single medication (from settings or trackers page) */
 export async function addMedication(payload: MedicationPayload) {
   try {
     const session = await auth();
@@ -223,7 +165,6 @@ export async function addMedication(payload: MedicationPayload) {
   }
 }
 
-/** Edit an existing medication */
 export async function updateMedication(id: string, payload: Partial<MedicationPayload>) {
   try {
     const session = await auth();
@@ -252,7 +193,6 @@ export async function updateMedication(id: string, payload: Partial<MedicationPa
   }
 }
 
-/** Soft-delete (deactivate) a medication */
 export async function deactivateMedication(id: string) {
   try {
     const session = await auth();
@@ -269,7 +209,7 @@ export async function deactivateMedication(id: string) {
   }
 }
 
-// ─── DAL helpers (called from server components/API routes) ──────────────────
+// ─── DAL helpers ─────────────────────────────────────────────────────────────
 
 export async function getTrackerSettings(userId: string) {
   const existing = await prisma.manualTracker.findMany({
@@ -280,9 +220,9 @@ export async function getTrackerSettings(userId: string) {
   return ALL_PARAM_TYPES.map((paramType) => {
     const record = existing.find((t) => t.paramType === paramType);
     return {
-      id:        record?.id ?? null,
+      id:           record?.id ?? null,
       paramType,
-      isActive:  record?.isActive ?? false,
+      isActive:     record?.isActive ?? false,
       readingCount: record?._count.readings ?? 0,
       ...TRACKER_META[paramType],
     };
@@ -298,17 +238,13 @@ export async function getReadingsForTracker(trackerId: string, userId: string) {
 }
 
 export async function getAllReadings(userId: string) {
-  const trackers = await prisma.manualTracker.findMany({
+  return prisma.manualTracker.findMany({
     where: { userId, isActive: true },
     include: {
-      readings: {
-        orderBy: { recordedAt: "desc" },
-        take: 50,
-      },
+      readings: { orderBy: { recordedAt: "desc" }, take: 50 },
     },
     orderBy: { createdAt: "asc" },
   });
-  return trackers;
 }
 
 export async function getMedications(userId: string) {
