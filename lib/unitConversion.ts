@@ -14,7 +14,6 @@ const COMMON_UNIT_ALIASES: Record<string, string> = {
   "meq/l": "mEq/L",
   "g%": "g/dL",
   "iiu/ml": "µIU/mL",
-  "iiu/ml": "µIU/mL",
   "miu/l": "mIU/L",
   "x10^3/ul": "×10³/µL",
   "x10^6/ul": "×10⁶/µL",
