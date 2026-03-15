@@ -4,8 +4,9 @@ import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import {
   Activity, Plus, TrendingUp,
-  MessageSquareText, AlertCircle, CheckCircle,
+  MessageSquareText, AlertTriangle, CheckCircle2,
   ArrowRight, ChevronRight, Clock, Sparkles, Zap,
+  ArrowUpRight, ArrowDownRight,
 } from "lucide-react";
 import EcosystemCarousel from "@/components/home/EcosystemCarousel";
 
@@ -18,13 +19,30 @@ export default async function HomePage() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const today = format(new Date(), "EEEE, MMMM do");
 
-  const [latestDoc, recentAnomaly, docCount] = userId
+  const [latestDoc, docCount, flaggedMarkers, recentMarkers] = userId
     ? await Promise.all([
-        prisma.document.findFirst({ where: { userId }, orderBy: { createdAt: "desc" } }),
-        prisma.extractedData.findFirst({ where: { userId, flag: { in: ["high", "low", "High", "Low"] } }, orderBy: { testDate: "desc" } }),
+        prisma.document.findFirst({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, fileName: true, createdAt: true, reportType: true },
+        }),
         prisma.document.count({ where: { userId } }),
+        prisma.extractedData.findMany({
+          where: { userId, flag: { in: ["high", "low", "High", "Low"] } },
+          orderBy: { testDate: "desc" },
+          take: 5,
+          distinct: ["markerName"],
+          select: { markerName: true, numericValue: true, unit: true, flag: true, testDate: true },
+        }),
+        prisma.extractedData.findMany({
+          where: { userId, numericValue: { not: null } },
+          orderBy: { testDate: "desc" },
+          take: 8,
+          distinct: ["markerName"],
+          select: { markerName: true, numericValue: true, unit: true, flag: true, testDate: true },
+        }),
       ])
-    : [null, null, 0];
+    : [null, 0, [], []];
 
   const isEmpty = docCount === 0;
   const daysSinceUpload = latestDoc
@@ -76,9 +94,9 @@ export default async function HomePage() {
               <h3 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-4">Get started in 3 steps</h3>
               <div className="space-y-4">
                 {[
-                  { step: "1", title: "Upload a lab report", desc: "Blood test, lipid profile, CBC — any report works.", href: "/upload", done: true },
-                  { step: "2", title: "Review extracted data", desc: "AI extracts every biomarker automatically.", href: null, done: false },
-                  { step: "3", title: "Track your trends", desc: "See how your health evolves over time.", href: null, done: false },
+                  { step: "1", title: "Upload a lab report", desc: "Blood test, lipid profile, CBC — any report works.", done: true },
+                  { step: "2", title: "Review extracted data", desc: "AI extracts every biomarker automatically.", done: false },
+                  { step: "3", title: "Track your trends", desc: "See how your health evolves over time.", done: false },
                 ].map((item) => (
                   <div key={item.step} className="flex items-start gap-3">
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0 mt-0.5 ${item.done ? "bg-gradient-to-br from-teal-400 to-cyan-500 text-white shadow-sm" : "bg-slate-100 text-slate-400"}`}>
@@ -115,44 +133,65 @@ export default async function HomePage() {
           </>
         ) : (
           <>
-            {/* Anomaly / All-clear card */}
-            {recentAnomaly ? (
-              <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-[28px] p-6 shadow-lg shadow-amber-500/25 relative overflow-hidden">
-                <div className="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full" />
-                <div className="relative z-10 flex items-start gap-4">
-                  <div className="w-11 h-11 bg-white/20 rounded-[14px] flex items-center justify-center shrink-0">
-                    <AlertCircle className="w-5 h-5 text-white" />
+            {/* Flagged markers or all-clear */}
+            {flaggedMarkers.length > 0 ? (
+              <div className="bg-white rounded-[24px] border border-amber-100 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-amber-50">
+                  <div className="w-8 h-8 bg-amber-50 rounded-[10px] flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
                   </div>
                   <div>
-                    <h2 className="text-[15px] font-bold text-white">Attention needed</h2>
-                    <p className="text-[13px] text-amber-100 font-medium leading-snug mt-1">
-                      {format(new Date(recentAnomaly.testDate), "MMM d")} report flagged{" "}
-                      <span className="font-bold text-white">{recentAnomaly.markerName}</span> as {recentAnomaly.flag}.
+                    <p className="text-[14px] font-bold text-slate-800">
+                      {flaggedMarkers.length} marker{flaggedMarkers.length > 1 ? "s" : ""} outside normal range
                     </p>
+                    <p className="text-[11px] text-slate-400 font-medium">Based on your most recent readings</p>
                   </div>
                 </div>
-                <div className="flex gap-3 mt-5 relative z-10">
-                  <Link href="/explore/doctors" className="flex-1 bg-white text-amber-700 text-[13px] font-bold py-2.5 rounded-[14px] transition-colors shadow-sm text-center hover:bg-amber-50">
-                    Consult Doctor
-                  </Link>
-                  <Link href="/vault" className="flex-1 bg-white/20 hover:bg-white/30 text-white text-[13px] font-bold py-2.5 rounded-[14px] transition-colors text-center">
-                    View Vault
+                <div className="divide-y divide-slate-50">
+                  {flaggedMarkers.map((m) => {
+                    const isHigh = m.flag?.toLowerCase() === "high";
+                    return (
+                      <Link
+                        key={m.markerName}
+                        href={`/vault/marker/${encodeURIComponent(m.markerName)}`}
+                        className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors group"
+                      >
+                        <div>
+                          <p className="text-[13px] font-semibold text-slate-700 capitalize">{m.markerName}</p>
+                          <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                            {format(new Date(m.testDate), "MMM d, yyyy")}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className={`flex items-center gap-1 text-[12px] font-bold px-2.5 py-1 rounded-full ${
+                            isHigh ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+                          }`}>
+                            {isHigh
+                              ? <ArrowUpRight className="w-3.5 h-3.5" />
+                              : <ArrowDownRight className="w-3.5 h-3.5" />
+                            }
+                            {m.numericValue} {m.unit}
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" />
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+                <div className="px-5 py-3 border-t border-slate-50">
+                  <Link href="/vault" className="text-[12px] font-bold text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1">
+                    View full vault <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
               </div>
             ) : (
-              <div className="relative bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[28px] p-6 shadow-lg shadow-emerald-500/20 overflow-hidden">
-                <div className="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full" />
-                <div className="relative z-10 flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/20 rounded-[16px] flex items-center justify-center shrink-0">
-                    <CheckCircle className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-[16px] font-extrabold text-white">All clear</h2>
-                    <p className="text-[13px] text-emerald-100 font-medium mt-0.5 leading-snug">
-                      No anomalies found in your archived health trends.
-                    </p>
-                  </div>
+              <div className="bg-white rounded-[24px] p-5 border border-emerald-100 shadow-sm flex items-center gap-4">
+                <div className="w-10 h-10 bg-emerald-50 rounded-[14px] flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-[14px] font-bold text-slate-800">All markers within range</p>
+                  <p className="text-[12px] text-slate-400 font-medium mt-0.5">No anomalies found in your recent readings.</p>
                 </div>
               </div>
             )}
@@ -175,16 +214,69 @@ export default async function HomePage() {
               </div>
             )}
 
-            {/* Recent upload */}
+            {/* Recent readings grid */}
+            {recentMarkers.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Recent Readings</p>
+                  <Link href="/vault" className="text-[12px] font-bold text-slate-400 hover:text-slate-700 transition-colors flex items-center gap-1">
+                    All reports <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {recentMarkers.map((m) => {
+                    const isHigh = m.flag?.toLowerCase() === "high";
+                    const isLow = m.flag?.toLowerCase() === "low";
+                    const isFlagged = isHigh || isLow;
+                    return (
+                      <Link
+                        key={m.markerName}
+                        href={`/vault/marker/${encodeURIComponent(m.markerName)}`}
+                        className="bg-white rounded-[18px] p-4 border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all group"
+                      >
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate capitalize mb-2">{m.markerName}</p>
+                        <div className="flex items-end gap-1.5">
+                          <span className={`text-[22px] font-extrabold tabular-nums leading-none ${isFlagged ? (isHigh ? "text-red-600" : "text-blue-600") : "text-slate-800"}`}>
+                            {m.numericValue}
+                          </span>
+                          <span className="text-[11px] font-semibold text-slate-400 mb-0.5">{m.unit}</span>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {format(new Date(m.testDate), "MMM d")}
+                          </span>
+                          {isFlagged ? (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isHigh ? "bg-red-50 text-red-500" : "bg-blue-50 text-blue-500"}`}>
+                              {isHigh ? "High" : "Low"}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">
+                              Normal
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Latest report */}
             {latestDoc && (
               <Link href={`/vault/${latestDoc.id}`} className="block group outline-none">
                 <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-sm hover:border-slate-200 hover:shadow-md transition-all">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Recent Upload</p>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Latest Report</p>
                     <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" />
                   </div>
                   <p className="text-[16px] font-bold text-slate-800 truncate">{latestDoc.fileName}</p>
-                  <p className="text-[12px] text-slate-400 font-medium mt-1">{format(new Date(latestDoc.createdAt), "MMMM d, yyyy")}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-[12px] text-slate-400 font-medium">{format(new Date(latestDoc.createdAt), "MMMM d, yyyy")}</p>
+                    {latestDoc.reportType && (
+                      <span className="text-[11px] font-semibold text-slate-400">· {latestDoc.reportType}</span>
+                    )}
+                  </div>
                 </div>
               </Link>
             )}
