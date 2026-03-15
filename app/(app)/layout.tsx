@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Plus, Activity } from "lucide-react";
+import { Plus, Activity, Settings } from "lucide-react";
 import MobileNav from "@/components/layout/MobileNav";
 import NavLinks from "@/components/layout/NavLinks";
 
@@ -62,6 +62,22 @@ export default async function AppLayout({
 
       {/* MAIN CONTENT */}
       <main className="flex-1 h-full overflow-y-auto relative scroll-smooth">
+        {/* Mobile top bar */}
+        <div className="md:hidden flex items-center justify-between px-4 pt-5 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-[10px] flex items-center justify-center shadow">
+              <Activity className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-extrabold text-[17px] tracking-tight text-[#0F1F3D]">HealthLedger</span>
+          </div>
+          <Link
+            href="/settings"
+            className="w-9 h-9 rounded-[10px] bg-white shadow-sm border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+          </Link>
+        </div>
+
         <div className="max-w-3xl mx-auto w-full pt-0 md:pt-6 px-0 md:px-8 pb-28 md:pb-8">
           {children}
         </div>
