@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FolderHeart, MessageSquareText, FlaskConical, Stethoscope, ShoppingBag, Settings } from "lucide-react";
+import { Home, FolderHeart, MessageSquareText, FlaskConical, Stethoscope, ShoppingBag, Settings, Activity } from "lucide-react";
 
 const coreLinks = [
   { href: "/home",     label: "Home",         icon: Home,               color: "text-sky-400" },
   { href: "/vault",    label: "Medical Vault", icon: FolderHeart,        color: "text-emerald-400" },
+  { href: "/trackers", label: "Health Hub",    icon: Activity,           color: "text-teal-400" },
   { href: "/chat",     label: "AI Assistant",  icon: MessageSquareText,  color: "text-violet-400" },
   { href: "/settings", label: "Settings",      icon: Settings,           color: "text-slate-400" },
 ];

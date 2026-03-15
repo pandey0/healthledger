@@ -55,6 +55,7 @@ model User {
   extractedData  ExtractedData[]
   manualTrackers ManualTracker[]
   medications    Medication[]
+  readings       ManualReading[]
 }
 
 model VerificationToken {
@@ -118,10 +119,27 @@ model ManualTracker {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readings ManualReading[]
 
   @@unique([userId, paramType])
   @@index([userId])
+}
+
+model ManualReading {
+  id         String        @id @default(cuid())
+  userId     String
+  trackerId  String
+  value      String        // e.g. "120/80" for BP, "95.4" for temp
+  recordedAt DateTime      @default(now())
+  notes      String?
+  createdAt  DateTime      @default(now())
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tracker ManualTracker @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+
+  @@index([userId, recordedAt(sort: Desc)])
+  @@index([trackerId])
 }
 
 model Medication {

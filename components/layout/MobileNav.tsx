@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Home, FolderHeart, MessageSquareText, Plus, Compass } from "lucide-react";
+import { Home, FolderHeart, MessageSquareText, Plus, Activity } from "lucide-react";
 
 export default function MobileNav() {
   const pathname = usePathname();
@@ -13,18 +13,14 @@ export default function MobileNav() {
     pathname.startsWith("/upload/batch-review")
   ) return null;
 
-  const isExplore = ["/explore", "/explore/lab", "/explore/doctors", "/explore/store"].some(
-    (p) => pathname.startsWith(p)
-  );
-
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-50">
       <div className="bg-white/95 backdrop-blur-xl shadow-[0_-4px_20px_rgba(0,0,0,0.07)] pt-2 pb-4 px-4 relative">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-200/80 to-transparent" />
         <div className="flex items-center justify-between max-w-sm mx-auto relative">
 
-          <NavItem href="/home"    label="Home"    icon={Home}               active={pathname === "/home"} />
-          <NavItem href="/vault"   label="Vault"   icon={FolderHeart}        active={pathname.startsWith("/vault")} />
+          <NavItem href="/home"     label="Home"   icon={Home}              active={pathname === "/home"} />
+          <NavItem href="/vault"    label="Vault"  icon={FolderHeart}       active={pathname.startsWith("/vault")} />
 
           {/* Center FAB */}
           <Link href="/upload" className="absolute left-1/2 -translate-x-1/2 -top-6 outline-none">
@@ -33,8 +29,8 @@ export default function MobileNav() {
             </div>
           </Link>
 
-          <NavItem href="/chat"    label="AI"      icon={MessageSquareText}  active={pathname === "/chat"} />
-          <NavItem href="/explore" label="Explore" icon={Compass}            active={isExplore} />
+          <NavItem href="/chat"     label="AI"     icon={MessageSquareText} active={pathname === "/chat"} />
+          <NavItem href="/trackers" label="Health" icon={Activity}          active={pathname.startsWith("/trackers")} />
 
         </div>
       </div>
