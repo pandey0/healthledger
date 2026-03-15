@@ -14,6 +14,7 @@ type ExtractedMarker = {
   value: string;
   unit: string;
   flag: string;
+  confidence?: number;
 };
 
 type PendingData = {
@@ -21,6 +22,9 @@ type PendingData = {
   fileUrl: string;
   extractedItems: ExtractedMarker[];
   testDate: string;
+  reportType?: string;
+  extractionQuality?: string;
+  warnings?: string[];
 };
 
 function flagColors(flag: string) {
@@ -89,6 +93,7 @@ export default function ReviewPage() {
       fileUrl: pendingData.fileUrl,
       extractedItems: pendingData.extractedItems,
       testDate: pendingData.testDate,
+      reportType: pendingData.reportType,
     });
 
     if (!result.success) {
@@ -120,11 +125,23 @@ export default function ReviewPage() {
           Back
         </button>
 
-        <h1 className="text-[24px] font-extrabold text-slate-800 tracking-tight">Verify Report</h1>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-[24px] font-extrabold text-slate-800 tracking-tight">Verify Report</h1>
+          {pendingData.reportType && (
+            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
+              {pendingData.reportType}
+            </span>
+          )}
+        </div>
         <p className="text-[13px] font-medium text-slate-500 mt-1 truncate">
           {pendingData.extractedItems.length} markers extracted from{" "}
           <span className="font-bold text-slate-700">{pendingData.fileName}</span>
         </p>
+        {pendingData.extractionQuality === "fair" && (
+          <p className="text-[12px] font-semibold text-amber-600 mt-1">
+            ⚠ Extraction quality is fair — please review values carefully.
+          </p>
+        )}
       </header>
 
       <main className="px-6 space-y-4">
@@ -187,7 +204,7 @@ export default function ReviewPage() {
               const isNumeric = !isNaN(parseFloat(item.value));
               const standardUnit = getStandardUnit(item.marker);
 
-              const confidence = "confidence" in item ? item.confidence : 0.95;
+              const confidence = item.confidence ?? 0.95;
               const lowConfidence = confidence < 0.75;
 
               return (

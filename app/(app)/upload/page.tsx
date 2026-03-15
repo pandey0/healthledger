@@ -71,6 +71,7 @@ export default function UploadPage() {
           fileName: selectedFile.name,
           fileUrl: permanentFileUrl,
           testDate: new Date().toISOString().split('T')[0],
+          reportType: aiData.report_type || null,
           extractionQuality: aiData.extraction_quality,
           warnings: aiData.warnings || [],
           requestId: aiData.request_id,

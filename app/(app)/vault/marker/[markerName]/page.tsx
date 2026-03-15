@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, TrendingUp, Info } from "lucide-react";
 import { getBiomarkerHistory } from "@/lib/dal/vault";
 import { getReferenceRange, isInRange } from "@/lib/referenceRanges";
+import { getUserProfile } from "@/lib/dal/user";
 import TrendGraph from "@/components/vault/TrendGraph";
 
 export default async function MarkerTrendPage({
@@ -12,8 +13,16 @@ export default async function MarkerTrendPage({
   const resolvedParams = await params;
   const decodedMarkerName = decodeURIComponent(resolvedParams.markerName);
 
-  const history = await getBiomarkerHistory(decodedMarkerName);
-  const ref = getReferenceRange(decodedMarkerName);
+  const [history, userProfile] = await Promise.all([
+    getBiomarkerHistory(decodedMarkerName),
+    getUserProfile(),
+  ]);
+
+  const profile = userProfile
+    ? { gender: userProfile.gender as "male" | "female" | "other" | null, age: userProfile.age }
+    : undefined;
+
+  const ref = getReferenceRange(decodedMarkerName, profile);
 
   const numericHistory = history.filter((d) => d.numericValue !== null);
   const latestEntry = numericHistory[0];

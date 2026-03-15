@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FolderHeart, MessageSquareText, FlaskConical, Stethoscope, ShoppingBag } from "lucide-react";
+import { Home, FolderHeart, MessageSquareText, FlaskConical, Stethoscope, ShoppingBag, Settings } from "lucide-react";
 
 const coreLinks = [
-  { href: "/home",  label: "Home",         icon: Home,            color: "text-sky-400" },
-  { href: "/vault", label: "Medical Vault", icon: FolderHeart,     color: "text-emerald-400" },
-  { href: "/chat",  label: "AI Assistant",  icon: MessageSquareText, color: "text-violet-400" },
+  { href: "/home",     label: "Home",         icon: Home,               color: "text-sky-400" },
+  { href: "/vault",    label: "Medical Vault", icon: FolderHeart,        color: "text-emerald-400" },
+  { href: "/chat",     label: "AI Assistant",  icon: MessageSquareText,  color: "text-violet-400" },
+  { href: "/settings", label: "Settings",      icon: Settings,           color: "text-slate-400" },
 ];
 
 const ecosystemLinks = [
@@ -22,7 +23,8 @@ export default function NavLinks({ section = "core" }: { section?: "core" | "eco
 
   return (
     <>
-      {links.map(({ href, label, icon: Icon, color, badge = undefined }) => {
+      {links.map(({ href, label, icon: Icon, color, ...rest }) => {
+        const badge = "badge" in rest ? (rest as { badge?: string }).badge : undefined;
         const active = pathname === href || (href !== "/home" && pathname.startsWith(href));
         return (
           <Link

@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { ChevronRight } from "lucide-react";
+import { getReportTypeColor } from "@/lib/reportTypes";
 
 interface VaultDocument {
   id: string;
   fileName: string;
   createdAt: string;
+  reportType: string | null;
   _count: { extractedData: number };
-  extractedData: { id: string }[];
+  extractedData: { id: string; markerName: string; flag: string | null }[];
 }
 
 interface VaultListProps {
@@ -36,9 +38,12 @@ export default function VaultList({ documents }: VaultListProps) {
           </h3>
           <div className="space-y-3">
             {docs.map((doc) => {
-              const flaggedCount = doc.extractedData.length;
+              const flaggedCount = doc.extractedData.filter(
+                (e) => e.flag === "high" || e.flag === "low"
+              ).length;
               const hasAnomalies = flaggedCount > 0;
               const borderColor = hasAnomalies ? "border-l-amber-400" : "border-l-emerald-400";
+              const typeColors = getReportTypeColor(doc.reportType);
 
               return (
                 <Link key={doc.id} href={`/vault/${doc.id}`} className="block group outline-none">
@@ -52,10 +57,17 @@ export default function VaultList({ documents }: VaultListProps) {
                           {format(new Date(doc.createdAt), "MMM")}
                         </span>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-[15px] font-bold text-slate-800 truncate group-hover:text-blue-700 transition-colors">
-                          {doc.fileName}
-                        </p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-[15px] font-bold text-slate-800 truncate group-hover:text-blue-700 transition-colors">
+                            {doc.fileName}
+                          </p>
+                          {doc.reportType && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${typeColors}`}>
+                              {doc.reportType}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[12px] font-medium text-slate-400">
                             {doc._count.extractedData} markers
@@ -97,9 +109,7 @@ function groupByMonth(documents: VaultDocument[]) {
 
   for (const doc of documents) {
     const key = format(new Date(doc.createdAt), "MMMM yyyy");
-    if (!map.has(key)) {
-      map.set(key, []);
-    }
+    if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(doc);
   }
 

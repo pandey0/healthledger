@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ArrowLeft, ExternalLink, Activity, Calendar, TrendingUp, ChevronRight } from "lucide-react";
 import { getDocumentById } from "@/lib/dal/vault";
 import { getReferenceRange } from "@/lib/referenceRanges";
+import { getReportTypeColor } from "@/lib/reportTypes";
 
 export default async function DocumentDetailPage({
   params,
@@ -34,14 +35,21 @@ export default async function DocumentDetailPage({
           Back to Vault
         </Link>
 
-        <h1 className="text-[22px] font-extrabold text-slate-800 tracking-tight truncate leading-tight">
-          {document.fileName}
-        </h1>
+        <div className="flex items-start gap-2 flex-wrap">
+          <h1 className="text-[22px] font-extrabold text-slate-800 tracking-tight truncate leading-tight">
+            {document.fileName}
+          </h1>
+          {document.reportType && (
+            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 mt-0.5 ${getReportTypeColor(document.reportType)}`}>
+              {document.reportType}
+            </span>
+          )}
+        </div>
 
         <div className="flex items-center gap-4 mt-2">
           <div className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-400">
             <Calendar className="w-3.5 h-3.5" />
-            {format(new Date(document.createdAt), "MMMM d, yyyy")}
+            {format(new Date(document.reportDate), "MMMM d, yyyy")}
           </div>
           <div className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-400">
             <Activity className="w-3.5 h-3.5" />

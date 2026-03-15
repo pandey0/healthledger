@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, FolderHeart, FileText, Activity, ChevronRight, Search } from "lucide-react";
+import { Plus, FolderHeart, FileText, Activity, ChevronRight, Clock } from "lucide-react";
 import { getUserDocuments } from "@/lib/dal/vault";
 import VaultContent from "@/components/vault/VaultContent";
 
@@ -10,28 +10,34 @@ export default async function VaultPage() {
     id: d.id,
     fileName: d.fileName,
     createdAt: d.reportDate.toISOString(),
+    reportType: d.reportType,
     _count: d._count,
-    extractedData: d.extractedData,
+    extractedData: d.extractedData.map((e) => ({
+      id: e.id,
+      markerName: e.markerName,
+      flag: e.flag,
+    })),
   }));
 
   return (
     <div className="flex flex-col animate-in fade-in duration-700 pb-12">
 
       <header className="px-6 pt-10 pb-5">
-        <h1 className="text-[32px] font-extrabold text-slate-800 tracking-tight">Medical Vault</h1>
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="text-[32px] font-extrabold text-slate-800 tracking-tight">Medical Vault</h1>
+          {documents.length > 0 && (
+            <Link href="/vault/timeline">
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-[12px] px-3 py-2 hover:border-slate-300 transition-all shadow-sm">
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
+                <span className="text-[12px] font-bold text-slate-600">Timeline</span>
+              </div>
+            </Link>
+          )}
+        </div>
         <p className="text-slate-500 mt-1 font-medium text-[14px]">
           Your personal archive of reports and extracted biomarkers.
         </p>
       </header>
-
-      {documents.length > 0 && (
-        <div className="px-6 mb-2">
-          <div className="flex items-center gap-3 bg-white rounded-[16px] px-4 py-3 border border-slate-100 shadow-sm text-slate-400">
-            <Search className="w-4 h-4 shrink-0" />
-            <span className="text-[14px] font-medium">Search reports or biomarkers...</span>
-          </div>
-        </div>
-      )}
 
       <main>
         {documents.length === 0 ? (
@@ -55,34 +61,17 @@ export default async function VaultPage() {
                 What gets stored
               </p>
               {[
-                {
-                  icon: FileText,
-                  title: "Original reports",
-                  desc: "Blood tests, lipid profiles, CBC, thyroid panels, scans.",
-                },
-                {
-                  icon: Activity,
-                  title: "Extracted biomarkers",
-                  desc: "Every value is parsed — marker name, result, unit, and flag.",
-                },
-                {
-                  icon: ChevronRight,
-                  title: "Trend history",
-                  desc: "Same biomarker across multiple reports builds your health timeline.",
-                },
+                { icon: FileText, title: "Original reports", desc: "Blood tests, lipid profiles, CBC, thyroid panels, scans." },
+                { icon: Activity, title: "Extracted biomarkers", desc: "Every value is parsed — marker name, result, unit, and flag." },
+                { icon: ChevronRight, title: "Trend history", desc: "Same biomarker across multiple reports builds your health timeline." },
               ].map((item) => (
-                <div
-                  key={item.title}
-                  className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm flex items-start gap-4"
-                >
+                <div key={item.title} className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm flex items-start gap-4">
                   <div className="w-9 h-9 bg-slate-50 rounded-[12px] flex items-center justify-center shrink-0">
                     <item.icon className="w-5 h-5 text-slate-400" />
                   </div>
                   <div>
                     <p className="text-[14px] font-bold text-slate-800">{item.title}</p>
-                    <p className="text-[12px] text-slate-500 font-medium mt-0.5 leading-relaxed">
-                      {item.desc}
-                    </p>
+                    <p className="text-[12px] text-slate-500 font-medium mt-0.5 leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
               ))}

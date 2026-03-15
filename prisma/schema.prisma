@@ -45,7 +45,11 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
-  
+
+  // HealthLedger profile fields
+  gender        String?   // "male" | "female" | "other"
+  dateOfBirth   DateTime?
+
   // HealthLedger specific relations
   documents     Document[]
   extractedData ExtractedData[]
@@ -69,7 +73,8 @@ model Document {
   fileName     String
   fileUrl      String   // URL from UploadThing
   reportDate   DateTime @default(now())
-  status       String   @default("processed") // e.g., processing, processed, failed
+  reportType   String?  // e.g., "CBC", "Lipid Panel", "Thyroid Panel"
+  status       String   @default("processed")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
