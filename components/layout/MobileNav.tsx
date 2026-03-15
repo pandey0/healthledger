@@ -7,7 +7,7 @@ import { Home, FolderHeart, MessageSquareText, Plus, Compass } from "lucide-reac
 export default function MobileNav() {
   const pathname = usePathname();
 
-  if (pathname === "/chat" || pathname.startsWith("/upload/review")) return null;
+  if (pathname === "/chat" || pathname.startsWith("/upload/review") || pathname.startsWith("/upload/batch-review")) return null;
 
   const isExplore = ["/explore", "/explore/lab", "/explore/doctors", "/explore/store", "/lab", "/doctors", "/store"].some(p => pathname.startsWith(p));
 

@@ -1,141 +1,339 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { UploadCloud, CheckCircle2, Loader2, Lock, ShieldCheck } from "lucide-react";
+import {
+  UploadCloud, CheckCircle2, Loader2, Lock, ShieldCheck,
+  FileText, ImageIcon, X, AlertCircle, Plus, ArrowRight,
+} from "lucide-react";
 import { genUploader } from "uploadthing/client";
+import { pdfToImageFile } from "@/lib/pdfToImage";
 
 const { uploadFiles } = genUploader();
 
-type Status = "idle" | "extracting" | "uploading" | "success";
+type FileStatus = "pending" | "converting" | "extracting" | "uploading" | "done" | "error";
 
-const steps = [
-  { key: "extracting", label: "Analyzing document", desc: "AI is reading your report" },
-  { key: "uploading", label: "Securing in vault", desc: "Encrypting and storing" },
-  { key: "success", label: "Analysis complete", desc: "Preparing review screen..." },
-];
+type QueueItem = {
+  id: string;
+  file: File;
+  status: FileStatus;
+  errorMessage?: string;
+  result?: PendingData;
+};
+
+type PendingData = {
+  fileName: string;
+  fileUrl: string;
+  extractedItems: ExtractedMarker[];
+  testDate: string;
+  reportType?: string;
+  extractionQuality?: string;
+  warnings?: string[];
+};
+
+type ExtractedMarker = {
+  id: string;
+  marker: string;
+  value: string;
+  unit: string;
+  flag: string;
+  confidence?: number;
+};
+
+const ACCEPTED = "image/jpeg,image/png,image/webp,application/pdf";
+const MAX_FILES = 5;
+
+function fileIcon(file: File) {
+  if (file.type === "application/pdf") return <FileText className="w-4 h-4 text-red-400" />;
+  return <ImageIcon className="w-4 h-4 text-blue-400" />;
+}
+
+function statusIcon(status: FileStatus) {
+  switch (status) {
+    case "done": return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+    case "error": return <AlertCircle className="w-4 h-4 text-red-500" />;
+    case "pending": return <div className="w-4 h-4 rounded-full border-2 border-slate-200" />;
+    default: return <Loader2 className="w-4 h-4 text-[#1A365D] animate-spin" />;
+  }
+}
+
+function statusLabel(status: FileStatus) {
+  switch (status) {
+    case "converting":  return "Converting PDF…";
+    case "extracting":  return "AI extracting markers…";
+    case "uploading":   return "Securing in vault…";
+    case "done":        return "Ready to review";
+    case "error":       return "Failed";
+    default:            return "Waiting";
+  }
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
 
 export default function UploadPage() {
   const router = useRouter();
-  const [status, setStatus] = useState<Status>("idle");
-  const [fileName, setFileName] = useState<string>("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [processing, setProcessing] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
-  const handleSmartUpload = async (selectedFile: File) => {
-    setFileName(selectedFile.name);
+  const setItemStatus = (id: string, status: FileStatus, extra?: Partial<QueueItem>) => {
+    setQueue((q) => q.map((item) => item.id === id ? { ...item, status, ...extra } : item));
+  };
 
-    try {
-      setStatus("extracting");
-      const formData = new FormData();
-      formData.append("file", selectedFile);
+  const addFiles = (newFiles: FileList | File[]) => {
+    const arr = Array.from(newFiles);
+    const filtered = arr.filter((f) => {
+      const ok = f.type === "application/pdf" || f.type.startsWith("image/");
+      return ok;
+    });
+    setQueue((prev) => {
+      const combined = [...prev, ...filtered.map((f) => ({
+        id: `${f.name}-${f.size}-${Date.now()}`,
+        file: f,
+        status: "pending" as FileStatus,
+      }))];
+      return combined.slice(0, MAX_FILES);
+    });
+  };
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-      const aiResponse = await fetch(`${backendUrl}/api/extract`, {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Request-ID": `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        },
-      });
+  const removeFile = (id: string) => {
+    setQueue((q) => q.filter((item) => item.id !== id));
+  };
 
-      if (!aiResponse.ok) {
-        const errorData = await aiResponse.json().catch(() => ({}));
-        const errorDetail = errorData.detail || "Could not read this document. Please ensure it is a valid report.";
-        throw new Error(errorDetail);
-      }
+  const processAll = useCallback(async () => {
+    if (processing || queue.length === 0) return;
+    setProcessing(true);
 
-      const aiData = await aiResponse.json();
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+    const results: PendingData[] = [];
 
-      // Check extraction quality
-      if (aiData.extraction_quality === "poor") {
-        const proceed = confirm(
-          "⚠️ The extraction quality is low. Some biomarkers may be inaccurate. Continue anyway?"
-        );
-        if (!proceed) {
-          setStatus("idle");
-          return;
+    for (const item of queue) {
+      try {
+        // Step 1: convert PDF if needed
+        let fileToProcess = item.file;
+        if (item.file.type === "application/pdf") {
+          setItemStatus(item.id, "converting");
+          fileToProcess = await pdfToImageFile(item.file);
         }
-      }
 
-      setStatus("uploading");
+        // Step 2: AI extraction
+        setItemStatus(item.id, "extracting");
+        const formData = new FormData();
+        formData.append("file", fileToProcess);
 
-      const utResponse = await uploadFiles("medicalReport", {
-        files: [selectedFile],
-      });
+        const aiResponse = await fetch(`${backendUrl}/api/extract`, {
+          method: "POST",
+          body: formData,
+          headers: {
+            "Request-ID": `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          },
+        });
 
-      const permanentFileUrl = utResponse[0].url;
+        if (!aiResponse.ok) {
+          const err = await aiResponse.json().catch(() => ({}));
+          throw new Error(err.detail || "AI extraction failed");
+        }
 
-      sessionStorage.setItem(
-        "pendingVaultData",
-        JSON.stringify({
+        const aiData = await aiResponse.json();
+
+        // Step 3: upload to S3
+        setItemStatus(item.id, "uploading");
+        const utResponse = await uploadFiles("medicalReport", { files: [fileToProcess] });
+        const permanentFileUrl = utResponse[0].url;
+
+        const pendingData: PendingData = {
           extractedItems: aiData.data,
-          fileName: selectedFile.name,
+          fileName: item.file.name,
           fileUrl: permanentFileUrl,
-          testDate: new Date().toISOString().split('T')[0],
+          testDate: new Date().toISOString().split("T")[0],
           reportType: aiData.report_type || null,
           extractionQuality: aiData.extraction_quality,
           warnings: aiData.warnings || [],
-          requestId: aiData.request_id,
-        })
-      );
+        };
 
-      setStatus("success");
-      setTimeout(() => router.push("/upload/review"), 1200);
-    } catch (error: unknown) {
-      setStatus("idle");
-      const message = error instanceof Error ? error.message : "An error occurred. Please try again or use a clearer image.";
-      alert(message);
+        setItemStatus(item.id, "done", { result: pendingData });
+        results.push(pendingData);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        setItemStatus(item.id, "error", { errorMessage: message });
+      }
     }
-  };
+
+    if (results.length === 0) {
+      setProcessing(false);
+      return;
+    }
+
+    if (results.length === 1) {
+      sessionStorage.setItem("pendingVaultData", JSON.stringify(results[0]));
+      router.push("/upload/review");
+    } else {
+      sessionStorage.setItem("pendingVaultDataBatch", JSON.stringify(results));
+      router.push("/upload/batch-review");
+    }
+  }, [processing, queue, router]);
+
+  const allDone = queue.length > 0 && queue.every((i) => i.status === "done" || i.status === "error");
+  const anyProcessing = queue.some((i) =>
+    i.status === "converting" || i.status === "extracting" || i.status === "uploading"
+  );
 
   return (
     <div className="flex flex-col min-h-full animate-in fade-in duration-700 px-6 pb-12">
 
       {/* Header */}
-      <header className="pt-10 pb-8">
-        <h1 className="text-[32px] font-extrabold text-slate-800 tracking-tight">Upload Report</h1>
+      <header className="pt-10 pb-6">
+        <h1 className="text-[32px] font-extrabold text-slate-800 tracking-tight">Upload Reports</h1>
         <p className="text-[14px] text-slate-500 font-medium mt-1">
-          Add a lab report to your vault for AI-powered analysis.
+          Upload up to {MAX_FILES} lab reports at once — images or PDFs.
         </p>
       </header>
 
-      {/* Idle — Drop zone */}
-      {status === "idle" && (
-        <div className="space-y-5">
-          <label className="flex flex-col items-center justify-center w-full min-h-[220px] border-2 border-dashed border-slate-200 rounded-[24px] bg-white hover:border-[#1A365D]/40 hover:bg-slate-50 transition-all cursor-pointer group active:scale-[0.99]">
-            <div className="flex flex-col items-center justify-center py-10">
-              <div className="p-5 bg-slate-50 rounded-[20px] border border-slate-100 mb-5 group-hover:bg-[#1A365D]/5 group-hover:-translate-y-1 transition-all duration-300 shadow-sm">
-                <UploadCloud className="w-8 h-8 text-slate-500 group-hover:text-[#1A365D] transition-colors" />
+      <div className="space-y-5">
+
+        {/* Drop zone */}
+        {queue.length < MAX_FILES && !anyProcessing && (
+          <label
+            className={`flex flex-col items-center justify-center w-full min-h-[200px] border-2 border-dashed rounded-[24px] transition-all cursor-pointer active:scale-[0.99] ${
+              dragOver
+                ? "border-[#1A365D]/60 bg-[#1A365D]/5 scale-[1.01]"
+                : "border-slate-200 bg-white hover:border-[#1A365D]/40 hover:bg-slate-50"
+            }`}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+            }}
+          >
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className={`p-5 rounded-[20px] border mb-4 transition-all duration-300 shadow-sm ${
+                dragOver ? "bg-[#1A365D]/10 border-[#1A365D]/20 -translate-y-1" : "bg-slate-50 border-slate-100"
+              }`}>
+                <UploadCloud className={`w-8 h-8 transition-colors ${dragOver ? "text-[#1A365D]" : "text-slate-400"}`} />
               </div>
-              <p className="text-[16px] font-bold text-slate-700 mb-1">Tap to select document</p>
-              <p className="text-[13px] text-slate-400 font-medium">JPG, PNG, or WebP · Max 4MB</p>
+              <p className="text-[16px] font-bold text-slate-700 mb-1">
+                {queue.length === 0 ? "Drop files here or tap to browse" : "Add more files"}
+              </p>
+              <p className="text-[13px] text-slate-400 font-medium">
+                JPG, PNG, WebP or PDF · Max 16 MB · Up to {MAX_FILES} files
+              </p>
+              {queue.length > 0 && (
+                <p className="text-[12px] font-semibold text-[#1A365D] mt-1">
+                  {MAX_FILES - queue.length} slot{MAX_FILES - queue.length !== 1 ? "s" : ""} remaining
+                </p>
+              )}
             </div>
             <input
+              ref={inputRef}
               type="file"
               className="hidden"
-              accept="image/*"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  handleSmartUpload(e.target.files[0]);
-                }
-              }}
+              accept={ACCEPTED}
+              multiple
+              onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }}
             />
           </label>
+        )}
 
-          {/* Supported report types */}
+        {/* File queue */}
+        {queue.length > 0 && (
+          <div className="bg-white rounded-[20px] border border-slate-100 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 pt-4 pb-2">
+              <p className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                {queue.length} file{queue.length !== 1 ? "s" : ""} selected
+              </p>
+              {!processing && (
+                <button
+                  onClick={() => setQueue([])}
+                  className="text-[11px] font-semibold text-slate-400 hover:text-red-500 transition-colors"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+
+            <div className="divide-y divide-slate-50">
+              {queue.map((item) => (
+                <div key={item.id} className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="shrink-0">{fileIcon(item.file)}</div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-bold text-slate-800 truncate">{item.file.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-[11px] text-slate-400 font-medium">{formatBytes(item.file.size)}</p>
+                      {item.status !== "pending" && (
+                        <p className={`text-[11px] font-semibold ${
+                          item.status === "done" ? "text-emerald-600" :
+                          item.status === "error" ? "text-red-500" : "text-[#1A365D]"
+                        }`}>
+                          · {statusLabel(item.status)}
+                        </p>
+                      )}
+                    </div>
+                    {item.status === "error" && item.errorMessage && (
+                      <p className="text-[11px] text-red-500 font-medium mt-0.5 leading-snug">{item.errorMessage}</p>
+                    )}
+                  </div>
+
+                  <div className="shrink-0">
+                    {!processing || item.status === "pending" || item.status === "done" || item.status === "error" ? (
+                      item.status === "pending" ? (
+                        <button
+                          onClick={() => removeFile(item.id)}
+                          className="p-1.5 text-slate-300 hover:text-red-400 rounded-[8px] transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        statusIcon(item.status)
+                      )
+                    ) : (
+                      statusIcon(item.status)
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Process button */}
+            {!allDone && (
+              <div className="p-4 border-t border-slate-50">
+                <button
+                  onClick={processAll}
+                  disabled={processing || queue.length === 0}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#1A365D] hover:bg-[#12243e] disabled:opacity-50 text-white font-bold text-[14px] rounded-[16px] shadow-md transition-all hover:-translate-y-0.5 active:scale-[0.98]"
+                >
+                  {anyProcessing ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</>
+                  ) : (
+                    <>
+                      <ArrowRight className="w-4 h-4" />
+                      Process {queue.length} report{queue.length !== 1 ? "s" : ""}
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Empty state: supported types */}
+        {queue.length === 0 && (
           <div className="bg-white rounded-[20px] p-5 border border-slate-100 shadow-sm">
             <p className="text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-3">
               Supported report types
             </p>
             <div className="grid grid-cols-2 gap-2">
               {[
-                "Blood / CBC",
-                "Lipid Profile",
-                "Thyroid (TFT)",
-                "Diabetes (HbA1c)",
-                "Liver Function",
-                "Kidney Function",
-                "Vitamin Panels",
-                "Health Checkup",
+                "Blood / CBC", "Lipid Profile",
+                "Thyroid (TFT)", "Diabetes (HbA1c)",
+                "Liver Function", "Kidney Function",
+                "Vitamin Panels", "Health Checkup",
               ].map((type) => (
                 <div key={type} className="flex items-center gap-2 text-[13px] text-slate-600 font-medium">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
@@ -144,67 +342,22 @@ export default function UploadPage() {
               ))}
             </div>
           </div>
+        )}
 
-          {/* Trust footer */}
-          <div className="flex items-start gap-3 bg-slate-50 p-4 rounded-[16px] border border-slate-100">
-            <Lock className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-            <p className="text-[12px] text-slate-500 font-medium leading-relaxed">
-              Your documents are processed using secure, stateless infrastructure.
-              Data is encrypted at rest and in transit.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Processing state */}
-      {status !== "idle" && (
-        <div className="flex flex-col items-center py-12">
-
-          {/* Status icon */}
-          <div className="w-20 h-20 rounded-[24px] bg-white border border-slate-100 shadow-sm flex items-center justify-center mb-6">
-            {status === "success" ? (
-              <CheckCircle2 className="w-9 h-9 text-emerald-500" />
-            ) : (
-              <Loader2 className="w-9 h-9 text-[#1A365D] animate-spin" />
-            )}
-          </div>
-
-          {/* Step indicator */}
-          <div className="w-full max-w-xs space-y-3 mb-8">
-            {steps.map((step, i) => {
-              const isActive = status === step.key;
-              const isDone =
-                (status === "uploading" && step.key === "extracting") ||
-                (status === "success" && (step.key === "extracting" || step.key === "uploading"));
-
-              return (
-                <div key={step.key} className={`flex items-center gap-3 transition-opacity ${isActive || isDone ? "opacity-100" : "opacity-30"}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold transition-colors ${isDone ? "bg-emerald-500 text-white" : isActive ? "bg-[#1A365D] text-white" : "bg-slate-100 text-slate-400"}`}>
-                    {isDone ? <CheckCircle2 className="w-3.5 h-3.5" /> : i + 1}
-                  </div>
-                  <div>
-                    <p className="text-[14px] font-bold text-slate-800">{step.label}</p>
-                    {isActive && <p className="text-[12px] text-slate-400 font-medium">{step.desc}</p>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <p className="text-[13px] text-slate-400 font-medium text-center max-w-[200px] truncate">
-            {fileName}
+        {/* Trust footer */}
+        <div className="flex items-start gap-3 bg-slate-50 p-4 rounded-[16px] border border-slate-100">
+          <Lock className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+          <p className="text-[12px] text-slate-500 font-medium leading-relaxed">
+            PDFs are converted locally in your browser before analysis. Nothing leaves your device unencrypted.
           </p>
         </div>
-      )}
 
-      {/* Security badge — idle only, bottom */}
-      {status === "idle" && (
-        <div className="mt-auto pt-6 flex items-center justify-center gap-2 text-slate-400">
+        <div className="flex items-center justify-center gap-2 text-slate-400">
           <ShieldCheck className="w-4 h-4 text-emerald-500" />
           <span className="text-[12px] font-semibold">HIPAA-compliant · End-to-end encrypted</span>
         </div>
-      )}
 
+      </div>
     </div>
   );
 }
