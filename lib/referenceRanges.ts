@@ -121,13 +121,48 @@ export function getReferenceRange(markerName: string): ReferenceRange | null {
   return RANGES[key] ?? null;
 }
 
-export function isInRange(value: number, range: ReferenceRange): boolean {
-  return value >= range.min && value <= range.max;
+import { convertValue, normalizeUnit } from "./unitConversion";
+
+export function isInRange(value: number, range: ReferenceRange, extractedUnit?: string): boolean {
+  if (!extractedUnit) return value >= range.min && value <= range.max;
+
+  const normalizedExtracted = normalizeUnit(extractedUnit);
+  const normalizedRange = normalizeUnit(range.unit);
+
+  if (!normalizedExtracted || !normalizedRange) {
+    return value >= range.min && value <= range.max;
+  }
+
+  if (normalizedExtracted === normalizedRange) {
+    return value >= range.min && value <= range.max;
+  }
+
+  const converted = convertValue(value, normalizedExtracted, normalizedRange);
+  if (converted === null) {
+    return value >= range.min && value <= range.max;
+  }
+
+  return converted >= range.min && converted <= range.max;
 }
 
-export function getValueStatus(value: number, range: ReferenceRange): "normal" | "borderline" | "abnormal" {
+export function getValueStatus(value: number, range: ReferenceRange, extractedUnit?: string): "normal" | "borderline" | "abnormal" {
   const pct10 = (range.max - range.min) * 0.1;
-  if (value >= range.min && value <= range.max) return "normal";
-  if (value >= range.min - pct10 && value <= range.max + pct10) return "borderline";
+  
+  let compareValue = value;
+  
+  if (extractedUnit) {
+    const normalizedExtracted = normalizeUnit(extractedUnit);
+    const normalizedRange = normalizeUnit(range.unit);
+
+    if (normalizedExtracted && normalizedRange && normalizedExtracted !== normalizedRange) {
+      const converted = convertValue(value, normalizedExtracted, normalizedRange);
+      if (converted !== null) {
+        compareValue = converted;
+      }
+    }
+  }
+
+  if (compareValue >= range.min && compareValue <= range.max) return "normal";
+  if (compareValue >= range.min - pct10 && compareValue <= range.max + pct10) return "borderline";
   return "abnormal";
 }

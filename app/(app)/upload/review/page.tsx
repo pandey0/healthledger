@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, FileText, AlertCircle, Trash2, Loader2, ArrowLeft, ShieldCheck, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { saveDocumentData } from "@/lib/actions/vault";
-import { getReferenceRange } from "@/lib/referenceRanges";
+import { getReferenceRange, getValueStatus } from "@/lib/referenceRanges";
+import { normalizeUnit, getStandardUnit } from "@/lib/unitConversion";
 
 type ExtractedMarker = {
   id: string;
@@ -48,6 +49,17 @@ export default function ReviewPage() {
       ...pendingData,
       extractedItems: pendingData.extractedItems.map((item) =>
         item.id === id ? { ...item, value: newValue } : item
+      ),
+    });
+  };
+
+  const handleUnitChange = (id: string, newUnit: string) => {
+    if (!pendingData) return;
+    const normalized = normalizeUnit(newUnit);
+    setPendingData({
+      ...pendingData,
+      extractedItems: pendingData.extractedItems.map((item) =>
+        item.id === id ? { ...item, unit: normalized || newUnit } : item
       ),
     });
   };
@@ -169,8 +181,11 @@ export default function ReviewPage() {
           <div className="space-y-2.5">
             {pendingData.extractedItems.map((item) => {
               const colors = flagColors(item.flag);
-              const isFlagged = colors.label !== "";
               const ref = getReferenceRange(item.marker);
+              const status = ref && item.value ? getValueStatus(parseFloat(item.value), ref, item.unit) : null;
+              const isFlagged = status === "abnormal";
+              const isNumeric = !isNaN(parseFloat(item.value));
+              const standardUnit = getStandardUnit(item.marker);
 
               return (
                 <div
@@ -188,13 +203,18 @@ export default function ReviewPage() {
                         <p className="text-[14px] font-bold text-slate-800 truncate">{item.marker}</p>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           {item.unit && (
-                            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
-                              {item.unit}
-                            </span>
+                            <input
+                              type="text"
+                              value={item.unit}
+                              onChange={(e) => handleUnitChange(item.id, e.target.value)}
+                              placeholder={standardUnit}
+                              className="w-16 text-[11px] font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                              title={`Standard unit for ${item.marker}: ${standardUnit}`}
+                            />
                           )}
                           {isFlagged && (
                             <span className={`inline-flex items-center px-2 py-0.5 border rounded text-[10px] font-bold uppercase tracking-wider ${colors.badge}`}>
-                              {colors.label}
+                              {status}
                             </span>
                           )}
                           {ref && (
