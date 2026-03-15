@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, FileText, AlertCircle, Trash2, Loader2, ArrowLeft, ShieldCheck, Calendar } from "lucide-react";
+import { CheckCircle2, FileText, AlertCircle, Trash2, Loader2, ArrowLeft, ShieldCheck, Calendar, Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import { saveDocumentData } from "@/lib/actions/vault";
 import { getReferenceRange, getValueStatus } from "@/lib/referenceRanges";
 import { normalizeUnit, getStandardUnit } from "@/lib/unitConversion";
+import { nanoid } from "nanoid";
 
 type ExtractedMarker = {
   id: string;
@@ -27,16 +29,53 @@ type PendingData = {
   warnings?: string[];
 };
 
-function flagColors(flag: string) {
-  if (flag === "high" || flag === "High") return { stripe: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200/60", label: "HIGH" };
-  if (flag === "low" || flag === "Low")   return { stripe: "bg-red-400",   badge: "bg-red-50 text-red-700 border-red-200/60",     label: "LOW" };
-  return { stripe: "bg-emerald-400/60", badge: "", label: "" };
+const FLAG_OPTIONS = ["normal", "high", "low"] as const;
+type FlagOption = typeof FLAG_OPTIONS[number];
+
+function stripeColor(flag: string) {
+  if (flag === "high" || flag === "High") return "bg-amber-400";
+  if (flag === "low" || flag === "Low") return "bg-red-400";
+  return "bg-emerald-400/60";
+}
+
+function badgeStyles(flag: string) {
+  if (flag === "high" || flag === "High") return "bg-amber-50 text-amber-700 border-amber-200/60";
+  if (flag === "low" || flag === "Low") return "bg-red-50 text-red-700 border-red-200/60";
+  return "";
+}
+
+function FlagToggle({ value, onChange }: { value: string; onChange: (f: FlagOption) => void }) {
+  const normalized = value.toLowerCase() as FlagOption;
+  return (
+    <div className="flex gap-1">
+      {FLAG_OPTIONS.map((f) => (
+        <button
+          key={f}
+          type="button"
+          onClick={() => onChange(f)}
+          className={`px-2.5 py-1 rounded-[8px] text-[10px] font-bold uppercase tracking-wide transition-colors ${
+            normalized === f
+              ? f === "normal"
+                ? "bg-emerald-500 text-white"
+                : f === "high"
+                ? "bg-amber-500 text-white"
+                : "bg-red-500 text-white"
+              : "bg-slate-100 text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          {f}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export default function ReviewPage() {
   const router = useRouter();
   const [pendingData, setPendingData] = useState<PendingData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [addingMarker, setAddingMarker] = useState(false);
+  const [newMarker, setNewMarker] = useState({ marker: "", value: "", unit: "", flag: "normal" as FlagOption });
 
   useEffect(() => {
     const saved = sessionStorage.getItem("pendingVaultData");
@@ -46,6 +85,16 @@ export default function ReviewPage() {
       router.replace("/upload");
     }
   }, [router]);
+
+  const handleMarkerNameChange = (id: string, newName: string) => {
+    if (!pendingData) return;
+    setPendingData({
+      ...pendingData,
+      extractedItems: pendingData.extractedItems.map((item) =>
+        item.id === id ? { ...item, marker: newName } : item
+      ),
+    });
+  };
 
   const handleValueChange = (id: string, newValue: string) => {
     if (!pendingData) return;
@@ -68,6 +117,16 @@ export default function ReviewPage() {
     });
   };
 
+  const handleFlagChange = (id: string, newFlag: FlagOption) => {
+    if (!pendingData) return;
+    setPendingData({
+      ...pendingData,
+      extractedItems: pendingData.extractedItems.map((item) =>
+        item.id === id ? { ...item, flag: newFlag } : item
+      ),
+    });
+  };
+
   const handleDelete = (id: string) => {
     if (!pendingData) return;
     setPendingData({
@@ -78,10 +137,24 @@ export default function ReviewPage() {
 
   const handleDateChange = (newDate: string) => {
     if (!pendingData) return;
+    setPendingData({ ...pendingData, testDate: newDate });
+  };
+
+  const handleAddMarker = () => {
+    if (!pendingData || !newMarker.marker.trim() || !newMarker.value.trim()) {
+      toast.error("Marker name and value are required");
+      return;
+    }
     setPendingData({
       ...pendingData,
-      testDate: newDate,
+      extractedItems: [
+        ...pendingData.extractedItems,
+        { ...newMarker, id: nanoid(), confidence: 1.0 },
+      ],
     });
+    setNewMarker({ marker: "", value: "", unit: "", flag: "normal" });
+    setAddingMarker(false);
+    toast.success("Marker added");
   };
 
   const handleConfirm = async () => {
@@ -97,7 +170,7 @@ export default function ReviewPage() {
     });
 
     if (!result.success) {
-      alert(result.error || "Failed to archive document.");
+      toast.error(result.error ?? "Failed to archive document.");
       setIsSaving(false);
       return;
     }
@@ -188,22 +261,75 @@ export default function ReviewPage() {
         <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-[16px] px-4 py-3">
           <AlertCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
           <p className="text-[12px] text-blue-700 font-medium leading-relaxed">
-            Review extracted values before saving. Tap any value to correct it. Swipe or tap the trash icon to remove a marker.
+            Review all extracted values. Edit marker names, values, units, or flags directly. Remove incorrect entries or add any that were missed.
           </p>
         </div>
 
         {/* Marker list */}
         <div>
-          <p className="text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">Extracted Markers</p>
+          <div className="flex items-center justify-between mb-3 px-1">
+            <p className="text-[13px] font-bold text-slate-400 uppercase tracking-wider">Extracted Markers</p>
+            <button
+              onClick={() => setAddingMarker(true)}
+              className="flex items-center gap-1 text-[12px] font-bold text-blue-600 hover:text-blue-700 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add marker
+            </button>
+          </div>
+
           <div className="space-y-2.5">
+
+            {/* Add marker form */}
+            {addingMarker && (
+              <div className="bg-blue-50 rounded-[18px] border border-blue-200 shadow-sm p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[13px] font-bold text-blue-700">Add missing marker</p>
+                  <button onClick={() => setAddingMarker(false)} className="text-slate-400 hover:text-slate-600">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Marker name (e.g. Hemoglobin)"
+                  value={newMarker.marker}
+                  onChange={(e) => setNewMarker({ ...newMarker, marker: e.target.value })}
+                  className="w-full text-[14px] font-semibold text-slate-800 bg-white border border-slate-200 rounded-[10px] px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Value"
+                    value={newMarker.value}
+                    onChange={(e) => setNewMarker({ ...newMarker, value: e.target.value })}
+                    className="flex-1 text-[14px] font-semibold text-slate-800 bg-white border border-slate-200 rounded-[10px] px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Unit"
+                    value={newMarker.unit}
+                    onChange={(e) => setNewMarker({ ...newMarker, unit: e.target.value })}
+                    className="w-24 text-[14px] font-semibold text-slate-700 bg-white border border-slate-200 rounded-[10px] px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+                  />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Flag</p>
+                  <FlagToggle value={newMarker.flag} onChange={(f) => setNewMarker({ ...newMarker, flag: f })} />
+                </div>
+                <button
+                  onClick={handleAddMarker}
+                  className="w-full py-2.5 bg-[#1A365D] text-white text-[13px] font-bold rounded-[12px] hover:bg-[#12243e] transition-colors"
+                >
+                  Add to List
+                </button>
+              </div>
+            )}
+
             {pendingData.extractedItems.map((item) => {
-              const colors = flagColors(item.flag);
               const ref = getReferenceRange(item.marker);
               const status = ref && item.value ? getValueStatus(parseFloat(item.value), ref, item.unit) : null;
-              const isFlagged = status === "abnormal";
-              const isNumeric = !isNaN(parseFloat(item.value));
+              const isFlagged = item.flag === "high" || item.flag === "High" || item.flag === "low" || item.flag === "Low";
               const standardUnit = getStandardUnit(item.marker);
-
               const confidence = item.confidence ?? 0.95;
               const lowConfidence = confidence < 0.75;
 
@@ -214,69 +340,64 @@ export default function ReviewPage() {
                     lowConfidence ? "border-amber-200" : "border-slate-100"
                   }`}
                 >
-                  {/* Status stripe */}
-                  <div className={`w-1 shrink-0 ${lowConfidence ? "bg-amber-400" : colors.stripe}`} />
+                  <div className={`w-1 shrink-0 ${stripeColor(item.flag)}`} />
 
-                  <div className="flex-1 p-4">
-                    <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 p-4 space-y-2.5">
 
-                      {/* Marker info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-[14px] font-bold text-slate-800 truncate">{item.marker}</p>
-                          {lowConfidence && (
-                            <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">
-                              Low confidence
-                            </span>
-                          )}
-                          {confidence >= 0.95 && (
-                            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-semibold">
-                              High confidence
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          {item.unit && (
-                            <input
-                              type="text"
-                              value={item.unit}
-                              onChange={(e) => handleUnitChange(item.id, e.target.value)}
-                              placeholder={standardUnit}
-                              className="w-16 text-[11px] font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                              title={`Standard unit for ${item.marker}: ${standardUnit}`}
-                            />
-                          )}
-                          {isFlagged && (
-                            <span className={`inline-flex items-center px-2 py-0.5 border rounded text-[10px] font-bold uppercase tracking-wider ${colors.badge}`}>
-                              {status}
-                            </span>
-                          )}
-                          {ref && (
-                            <span className="text-[11px] text-slate-400 font-medium">
-                              Ref: {ref.min}–{ref.max === 999 ? "↑" : ref.max} {ref.unit}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Value input + delete */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Input
-                          type="text"
-                          value={item.value}
-                          onChange={(e) => handleValueChange(item.id, e.target.value)}
-                          className="w-20 h-9 text-right text-[15px] font-bold text-slate-800 border-slate-200 bg-slate-50 rounded-[10px] focus-visible:ring-1"
-                        />
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="p-2 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-[10px] transition-colors opacity-0 group-hover:opacity-100"
-                          aria-label="Remove"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-
+                    {/* Row 1: marker name input + delete */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={item.marker}
+                        onChange={(e) => handleMarkerNameChange(item.id, e.target.value)}
+                        className="flex-1 text-[14px] font-bold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-blue-400 focus:outline-none transition-colors py-0.5"
+                        title="Edit marker name"
+                      />
+                      {lowConfidence && (
+                        <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold shrink-0">
+                          Low confidence
+                        </span>
+                      )}
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="p-1.5 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-[8px] transition-colors shrink-0"
+                        aria-label="Remove"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
+
+                    {/* Row 2: value input + unit input */}
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="text"
+                        value={item.value}
+                        onChange={(e) => handleValueChange(item.id, e.target.value)}
+                        className="w-24 h-9 text-right text-[15px] font-bold text-slate-800 border-slate-200 bg-slate-50 rounded-[10px] focus-visible:ring-1"
+                      />
+                      {item.unit !== undefined && (
+                        <input
+                          type="text"
+                          value={item.unit}
+                          onChange={(e) => handleUnitChange(item.id, e.target.value)}
+                          placeholder={standardUnit}
+                          className="w-20 text-[12px] font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-[8px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          title={`Standard unit: ${standardUnit}`}
+                        />
+                      )}
+                      {ref && (
+                        <span className="text-[11px] text-slate-400 font-medium ml-1">
+                          Ref: {ref.min}–{ref.max === 999 ? "↑" : ref.max} {ref.unit}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Row 3: flag toggle */}
+                    <FlagToggle
+                      value={item.flag}
+                      onChange={(f) => handleFlagChange(item.id, f)}
+                    />
+
                   </div>
                 </div>
               );

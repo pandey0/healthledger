@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
-import { ArrowLeft, ExternalLink, Activity, Calendar, TrendingUp, ChevronRight } from "lucide-react";
+import { ArrowLeft, ExternalLink, Activity, Calendar } from "lucide-react";
 import { getDocumentById } from "@/lib/dal/vault";
-import { getReferenceRange } from "@/lib/referenceRanges";
 import { getReportTypeColor } from "@/lib/reportTypes";
+import DeleteDocumentButton from "@/components/vault/DeleteDocumentButton";
+import EditableMarkerList from "@/components/vault/EditableMarkerList";
 
 export default async function DocumentDetailPage({
   params,
@@ -21,6 +22,15 @@ export default async function DocumentDetailPage({
   const anomalies = document.extractedData.filter(
     (d) => d.flag === "high" || d.flag === "low" || d.flag === "High" || d.flag === "Low"
   );
+
+  const markers = document.extractedData.map((d) => ({
+    id: d.id,
+    markerName: d.markerName,
+    numericValue: d.numericValue,
+    textValue: d.textValue,
+    unit: d.unit,
+    flag: d.flag ?? "normal",
+  }));
 
   return (
     <div className="flex flex-col animate-in slide-in-from-right-4 duration-500 pb-12">
@@ -83,80 +93,15 @@ export default async function DocumentDetailPage({
           <div className="flex items-center gap-3 bg-white rounded-[16px] px-4 py-3 border border-slate-100 shadow-sm hover:border-slate-200 transition-colors">
             <ExternalLink className="w-4 h-4 text-slate-400 shrink-0" />
             <span className="text-[14px] font-semibold text-slate-600 flex-1">View Original Document</span>
-            <ChevronRight className="w-4 h-4 text-slate-200" />
           </div>
         </a>
 
-        {/* Biomarker list */}
-        <div>
-          <p className="text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">
-            Extracted Biomarkers
-          </p>
+        {/* Editable biomarker list */}
+        <EditableMarkerList markers={markers} />
 
-          <div className="space-y-2.5">
-            {document.extractedData.map((data) => {
-              const ref = data.numericValue !== null ? getReferenceRange(data.markerName) : null;
-              const isHigh = data.flag === "high" || data.flag === "High";
-              const isLow = data.flag === "low" || data.flag === "Low";
-              const isFlagged = isHigh || isLow;
-
-              let statusColor = "bg-emerald-400/70";
-              let badgeBg = "";
-              let badgeText = "";
-              if (isHigh) { statusColor = "bg-amber-400"; badgeBg = "bg-amber-50 text-amber-700 border-amber-200/60"; badgeText = "HIGH"; }
-              if (isLow)  { statusColor = "bg-red-400"; badgeBg = "bg-red-50 text-red-700 border-red-200/60"; badgeText = "LOW"; }
-
-              return (
-                <Link
-                  key={data.id}
-                  href={`/vault/marker/${encodeURIComponent(data.markerName)}`}
-                  className="block outline-none group"
-                >
-                  <div className="bg-white rounded-[18px] border border-slate-100 shadow-sm hover:border-slate-200 hover:shadow-md transition-all overflow-hidden flex items-stretch">
-
-                    {/* Status stripe */}
-                    <div className={`w-1 shrink-0 ${statusColor}`} />
-
-                    <div className="flex-1 p-4 flex items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-bold text-slate-800 truncate group-hover:text-blue-700 transition-colors">
-                          {data.markerName}
-                        </p>
-
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          {isFlagged && (
-                            <span className={`inline-flex items-center px-2 py-0.5 border rounded text-[10px] font-bold uppercase tracking-wider ${badgeBg}`}>
-                              {badgeText}
-                            </span>
-                          )}
-                          {ref && (
-                            <span className="text-[11px] font-medium text-slate-400">
-                              Ref: {ref.min}–{ref.max === 999 ? "↑" : ref.max} {ref.unit}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="text-right">
-                          <p className="text-[18px] font-extrabold text-slate-800 tabular-nums leading-none">
-                            {data.numericValue !== null ? data.numericValue : data.textValue}
-                          </p>
-                          {data.unit && (
-                            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mt-0.5">
-                              {data.unit}
-                            </p>
-                          )}
-                        </div>
-                        <TrendingUp className="w-4 h-4 text-slate-200 group-hover:text-slate-400 transition-colors" />
-                      </div>
-                    </div>
-
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+        {/* Delete report */}
+        <div className="pt-2 pb-6">
+          <DeleteDocumentButton documentId={document.id} />
         </div>
 
       </main>

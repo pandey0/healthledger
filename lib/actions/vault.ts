@@ -63,3 +63,81 @@ export async function saveDocumentData(payload: SaveDocumentPayload) {
     return { success: false, error: "Failed to archive document securely." };
   }
 }
+
+export async function deleteDocument(documentId: string) {
+  try {
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) return { success: false, error: "Unauthorized." };
+
+    const doc = await prisma.document.findUnique({ where: { id: documentId } });
+    if (!doc || doc.userId !== userId) return { success: false, error: "Not found." };
+
+    await prisma.extractedData.deleteMany({ where: { documentId } });
+    await prisma.document.delete({ where: { id: documentId } });
+
+    revalidatePath("/vault");
+    return { success: true };
+  } catch (error) {
+    console.error("Action Error: Failed to delete document.", error);
+    return { success: false, error: "Failed to delete report." };
+  }
+}
+
+type UpdateMarkerPayload = {
+  id: string;
+  markerName: string;
+  value: string;
+  unit: string;
+  flag: string;
+};
+
+export async function updateMarker(payload: UpdateMarkerPayload) {
+  try {
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) return { success: false, error: "Unauthorized." };
+
+    const existing = await prisma.extractedData.findUnique({ where: { id: payload.id } });
+    if (!existing || existing.userId !== userId) return { success: false, error: "Not found." };
+
+    const numericVal = parseFloat(payload.value);
+    const isNumeric = !isNaN(numericVal);
+
+    await prisma.extractedData.update({
+      where: { id: payload.id },
+      data: {
+        markerName: payload.markerName,
+        numericValue: isNumeric ? numericVal : null,
+        textValue: isNumeric ? null : payload.value,
+        unit: payload.unit,
+        flag: payload.flag.toLowerCase(),
+      },
+    });
+
+    revalidatePath("/vault");
+    return { success: true };
+  } catch (error) {
+    console.error("Action Error: Failed to update marker.", error);
+    return { success: false, error: "Failed to update marker." };
+  }
+}
+
+export async function deleteMarker(markerId: string) {
+  try {
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) return { success: false, error: "Unauthorized." };
+
+    const existing = await prisma.extractedData.findUnique({ where: { id: markerId } });
+    if (!existing || existing.userId !== userId) return { success: false, error: "Not found." };
+
+    await prisma.extractedData.delete({ where: { id: markerId } });
+
+    revalidatePath("/vault");
+    return { success: true };
+  } catch (error) {
+    console.error("Action Error: Failed to delete marker.", error);
+    return { success: false, error: "Failed to delete marker." };
+  }
+}
