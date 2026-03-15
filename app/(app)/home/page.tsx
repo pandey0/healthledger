@@ -1,16 +1,44 @@
 import { auth } from "@/auth";
 import Link from "next/link";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import {
   Activity, Plus, TrendingUp,
   MessageSquareText, AlertTriangle, CheckCircle2,
   ArrowRight, ChevronRight, Clock, Sparkles, Zap,
-  ArrowUpRight, ArrowDownRight,
+  ArrowUpRight, ArrowDownRight, Pill, Settings2,
 } from "lucide-react";
 import EcosystemCarousel from "@/components/home/EcosystemCarousel";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import TourStarter from "@/components/onboarding/TourStarter";
+import { TRACKER_META, FREQUENCY_LABELS } from "@/lib/actions/health";
+import type { MedFrequency } from "@/lib/actions/health";
+
+// ─── Medication reminder hint ────────────────────────────────────────────────
+
+function getMedHint(frequency: string, hour: number): { label: string; urgent: boolean } {
+  switch (frequency) {
+    case "once_daily":
+      if (hour < 10)  return { label: "Due this morning", urgent: true };
+      if (hour < 22)  return { label: "Due today", urgent: false };
+      return { label: "Due tomorrow", urgent: false };
+    case "twice_daily":
+      if (hour < 9)   return { label: "Morning & evening doses due", urgent: true };
+      if (hour < 15)  return { label: "Evening dose due later", urgent: false };
+      if (hour < 21)  return { label: "Evening dose due now", urgent: true };
+      return { label: "Due tomorrow morning", urgent: false };
+    case "thrice_daily":
+      return { label: "3 doses today", urgent: false };
+    case "four_times_daily":
+      return { label: "4 doses today", urgent: false };
+    case "as_needed":
+      return { label: "Take as needed", urgent: false };
+    case "weekly":
+      return { label: "Due this week", urgent: false };
+    default:
+      return { label: "Check schedule", urgent: false };
+  }
+}
 
 export default async function HomePage() {
   const session = await auth();
@@ -21,7 +49,7 @@ export default async function HomePage() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const today = format(new Date(), "EEEE, MMMM do");
 
-  const [latestDoc, docCount, flaggedMarkers, userProfile] = userId
+  const [latestDoc, docCount, flaggedMarkers, userProfile, recentReadings, activeMeds] = userId
     ? await Promise.all([
         prisma.document.findFirst({
           where: { userId },
@@ -40,15 +68,31 @@ export default async function HomePage() {
           where: { id: userId },
           select: { gender: true, dateOfBirth: true },
         }),
+        // Recent manual readings across all trackers
+        prisma.manualReading.findMany({
+          where: { userId },
+          orderBy: { recordedAt: "desc" },
+          take: 5,
+          include: {
+            tracker: { select: { paramType: true, unit: true } },
+          },
+        }),
+        // Active medications
+        prisma.medication.findMany({
+          where: { userId, isActive: true },
+          orderBy: { createdAt: "asc" },
+        }),
       ])
-    : [null, 0, [], null];
+    : [null, 0, [], null, [], []];
 
   const profileIncomplete = !userProfile?.gender && !userProfile?.dateOfBirth;
-
   const isEmpty = docCount === 0;
   const daysSinceUpload = latestDoc
     ? Math.floor((Date.now() - new Date(latestDoc.createdAt).getTime()) / (1000 * 60 * 60 * 24))
     : null;
+
+  const hasReadings  = recentReadings.length > 0;
+  const hasMeds      = activeMeds.length > 0;
 
   return (
     <div className="flex flex-col animate-in fade-in duration-500 pb-28 md:pb-12">
@@ -63,8 +107,89 @@ export default async function HomePage() {
         </h1>
       </header>
 
-      <main className="px-6 space-y-6">
+      <main className="px-6 space-y-5">
 
+        {/* ── Today's Medications ────────────────────────────────────────────── */}
+        {(hasMeds || !isEmpty) && (
+          <section>
+            <div className="flex items-center justify-between mb-3 px-0.5">
+              <div className="flex items-center gap-2">
+                <Pill className="w-4 h-4 text-violet-500" />
+                <p className="text-[13px] font-bold text-slate-700">Today&apos;s Medications</p>
+              </div>
+              <Link
+                href="/trackers"
+                className="text-[11px] font-bold text-slate-400 hover:text-slate-700 flex items-center gap-1 transition-colors"
+              >
+                Manage <Settings2 className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {hasMeds ? (
+              <div className="bg-white rounded-[22px] border border-slate-100 shadow-sm overflow-hidden">
+                <div className="divide-y divide-slate-50">
+                  {activeMeds.map((med) => {
+                    const hint = getMedHint(med.frequency, hour);
+                    return (
+                      <div key={med.id} className="flex items-center justify-between px-4 py-3.5 gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0 ${
+                            hint.urgent ? "bg-violet-100" : "bg-slate-100"
+                          }`}>
+                            <Pill className={`w-4 h-4 ${hint.urgent ? "text-violet-600" : "text-slate-400"}`} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-[14px] font-bold text-slate-800 truncate">{med.name}</p>
+                              <span className="text-[11px] font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full shrink-0">
+                                {med.dosage}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                              {FREQUENCY_LABELS[med.frequency as MedFrequency] ?? med.frequency}
+                              {med.notes && <span className="ml-1">· {med.notes}</span>}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${
+                          hint.urgent
+                            ? "bg-violet-100 text-violet-700"
+                            : "bg-slate-100 text-slate-500"
+                        }`}>
+                          {hint.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Add medication footer */}
+                <Link
+                  href="/trackers"
+                  className="flex items-center justify-center gap-2 px-4 py-3 border-t border-slate-50 text-[12px] font-bold text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add / edit medications
+                </Link>
+              </div>
+            ) : (
+              /* Empty state */
+              <Link href="/trackers" className="block group">
+                <div className="bg-white rounded-[22px] border border-dashed border-slate-200 p-5 flex items-center gap-4 hover:border-slate-300 transition-colors">
+                  <div className="w-10 h-10 rounded-[13px] bg-violet-50 flex items-center justify-center shrink-0">
+                    <Pill className="w-5 h-5 text-violet-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[14px] font-bold text-slate-700">Add your medications</p>
+                    <p className="text-[12px] text-slate-400 font-medium mt-0.5">Log your prescriptions and we&apos;ll remind you daily.</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+                </div>
+              </Link>
+            )}
+          </section>
+        )}
+
+        {/* ── Lab Report Content ─────────────────────────────────────────────── */}
         {isEmpty ? (
           <>
             {/* Welcome hero */}
@@ -99,9 +224,9 @@ export default async function HomePage() {
               <h3 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-4">Get started in 3 steps</h3>
               <div className="space-y-4">
                 {[
-                  { step: "1", title: "Upload a lab report", desc: "Blood test, lipid profile, CBC — any report works.", done: true },
-                  { step: "2", title: "Review extracted data", desc: "AI extracts every biomarker automatically.", done: false },
-                  { step: "3", title: "Track your trends", desc: "See how your health evolves over time.", done: false },
+                  { step: "1", title: "Upload a lab report",   desc: "Blood test, lipid profile, CBC — any report works.", done: true  },
+                  { step: "2", title: "Review extracted data", desc: "AI extracts every biomarker automatically.",           done: false },
+                  { step: "3", title: "Track your trends",     desc: "See how your health evolves over time.",              done: false },
                 ].map((item) => (
                   <div key={item.step} className="flex items-start gap-3">
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0 mt-0.5 ${item.done ? "bg-gradient-to-br from-teal-400 to-cyan-500 text-white shadow-sm" : "bg-slate-100 text-slate-400"}`}>
@@ -173,8 +298,7 @@ export default async function HomePage() {
                           }`}>
                             {isHigh
                               ? <ArrowUpRight className="w-3.5 h-3.5" />
-                              : <ArrowDownRight className="w-3.5 h-3.5" />
-                            }
+                              : <ArrowDownRight className="w-3.5 h-3.5" />}
                             {m.numericValue} {m.unit}
                           </div>
                           <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" />
@@ -240,9 +364,66 @@ export default async function HomePage() {
           </>
         )}
 
+        {/* ── Recent Health Readings ─────────────────────────────────────────── */}
+        {hasReadings && (
+          <section>
+            <div className="flex items-center justify-between mb-3 px-0.5">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-teal-500" />
+                <p className="text-[13px] font-bold text-slate-700">Recent Readings</p>
+              </div>
+              <Link
+                href="/trackers"
+                className="text-[11px] font-bold text-slate-400 hover:text-slate-700 flex items-center gap-1 transition-colors"
+              >
+                View all <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="bg-white rounded-[22px] border border-slate-100 shadow-sm overflow-hidden">
+              <div className="divide-y divide-slate-50">
+                {recentReadings.map((r) => {
+                  const meta = TRACKER_META[r.tracker.paramType as keyof typeof TRACKER_META];
+                  return (
+                    <Link
+                      key={r.id}
+                      href="/trackers"
+                      className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-[20px] leading-none">{meta?.emoji ?? "📊"}</span>
+                        <div>
+                          <p className="text-[13px] font-bold text-slate-800">{meta?.label ?? r.tracker.paramType}</p>
+                          <p className="text-[11px] text-slate-400 font-medium">
+                            {formatDistanceToNow(new Date(r.recordedAt), { addSuffix: true })}
+                            {r.notes && <span className="ml-1">· {r.notes}</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[15px] font-extrabold text-slate-900">{r.value}</span>
+                        <span className="text-[11px] font-semibold text-slate-400">{r.tracker.unit}</span>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all ml-1" />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <Link
+                href="/trackers"
+                className="flex items-center justify-center gap-2 px-4 py-3 border-t border-slate-50 text-[12px] font-bold text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" /> Log a new reading
+              </Link>
+            </div>
+          </section>
+        )}
+
+        {/* ── Ecosystem Carousel ─────────────────────────────────────────────── */}
         <EcosystemCarousel />
 
-        {/* AI Assistant */}
+        {/* ── AI Assistant ───────────────────────────────────────────────────── */}
         <Link href="/chat" className="block outline-none group">
           <div className="relative bg-gradient-to-br from-[#0F1F3D] via-[#1A365D] to-[#2d5fa8] p-5 rounded-[24px] shadow-xl shadow-slate-900/15 flex items-center justify-between overflow-hidden hover:-translate-y-0.5 transition-transform active:scale-[0.99]">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/5 rounded-full" />
