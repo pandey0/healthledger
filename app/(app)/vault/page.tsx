@@ -9,7 +9,7 @@ export default async function VaultPage() {
   const serialized = documents.map((d) => ({
     id: d.id,
     fileName: d.fileName,
-    createdAt: d.createdAt.toISOString(),
+    createdAt: d.reportDate.toISOString(),
     _count: d._count,
     extractedData: d.extractedData,
   }));
