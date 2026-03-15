@@ -53,6 +53,7 @@ export default function UploadPage() {
           extractedItems: aiData.data,
           fileName: selectedFile.name,
           fileUrl: permanentFileUrl,
+          testDate: new Date().toISOString().split('T')[0],
         })
       );
 
