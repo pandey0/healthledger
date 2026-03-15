@@ -22,7 +22,7 @@ export default function NavLinks({ section = "core" }: { section?: "core" | "eco
 
   return (
     <>
-      {links.map(({ href, label, icon: Icon, color, badge }) => {
+      {links.map(({ href, label, icon: Icon, color, badge = undefined }) => {
         const active = pathname === href || (href !== "/home" && pathname.startsWith(href));
         return (
           <Link
