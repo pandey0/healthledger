@@ -1,0 +1,120 @@
+# main.py
+import os
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+
+load_dotenv()
+
+app = FastAPI(title="HealthLedger AI Engine")
+
+# Allow your Next.js frontend to talk to this backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Change to your Next.js URL in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+client = genai.Client()
+
+class Biomarker(BaseModel):
+    marker: str
+    value: str
+    unit: str
+    flag: str
+
+class ExtractionResponse(BaseModel):
+    extracted_items: List[Biomarker]
+
+@app.post("/api/extract")
+async def extract_report_data(file: UploadFile = File(...)):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Please upload a valid image.")
+
+    try:
+        file_bytes = await file.read()
+        prompt = """
+        You are an expert, highly precise medical data extractor. 
+        Analyze this lab report. Extract every single biomarker, its value, its unit, 
+        and determine if it is high, low, or normal based on the reference ranges in the image.
+        """
+
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[
+                types.Part.from_bytes(data=file_bytes, mime_type=file.content_type),
+                prompt
+            ],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=ExtractionResponse,
+                temperature=0.1, 
+            ),
+        )
+
+        ai_response = ExtractionResponse.model_validate_json(response.text)
+        
+        formatted_data = []
+        for index, item in enumerate(ai_response.extracted_items):
+            formatted_data.append({
+                "id": f"marker-{index + 1}",
+                "marker": item.marker,
+                "value": item.value,
+                "unit": item.unit,
+                "flag": item.flag
+            })
+
+        return {"status": "success", "data": formatted_data}
+
+    except Exception as e:
+        print(f"Extraction Error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to analyze document.")
+# Add this class right below your other Pydantic models
+class ChatRequest(BaseModel):
+    message: str
+    context: str
+
+# Add this new route at the bottom of the file
+@app.post("/api/chat")
+async def chat_with_data(request: ChatRequest):
+    try:
+        # The strict "Calm Intelligence" System Prompt
+        system_prompt = f"""
+        You are HealthLedger's calm, intelligent, and highly precise medical archive assistant.
+        Your tone is professional, non-alarmist, soft-spoken, and respectful.
+        DO NOT use emojis. DO NOT be overly enthusiastic or chatty. 
+        Answer the user's question STRICTLY based on the provided medical history data below.
+        If the data does not contain the answer, say "I do not have a record of that in your vault."
+        When providing numbers, always include the date and the unit of measurement.
+
+        USER'S MEDICAL HISTORY DATA:
+        {request.context}
+        """
+
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[system_prompt, request.message],
+            config=types.GenerateContentConfig(
+                temperature=0.1, # Keep it highly factual
+            ),
+        )
+
+        return {"status": "success", "text": response.text}
+
+    except Exception as e:
+        print(f"Chat Error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process query.")
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "message": "HealthLedger AI Engine is running."}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

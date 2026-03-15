@@ -187,20 +187,37 @@ export default function ReviewPage() {
               const isNumeric = !isNaN(parseFloat(item.value));
               const standardUnit = getStandardUnit(item.marker);
 
+              const confidence = "confidence" in item ? item.confidence : 0.95;
+              const lowConfidence = confidence < 0.75;
+
               return (
                 <div
                   key={item.id}
-                  className="bg-white rounded-[18px] border border-slate-100 shadow-sm overflow-hidden flex items-stretch group"
+                  className={`bg-white rounded-[18px] border shadow-sm overflow-hidden flex items-stretch group ${
+                    lowConfidence ? "border-amber-200" : "border-slate-100"
+                  }`}
                 >
                   {/* Status stripe */}
-                  <div className={`w-1 shrink-0 ${colors.stripe}`} />
+                  <div className={`w-1 shrink-0 ${lowConfidence ? "bg-amber-400" : colors.stripe}`} />
 
                   <div className="flex-1 p-4">
                     <div className="flex items-start justify-between gap-3">
 
                       {/* Marker info */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-bold text-slate-800 truncate">{item.marker}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[14px] font-bold text-slate-800 truncate">{item.marker}</p>
+                          {lowConfidence && (
+                            <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">
+                              Low confidence
+                            </span>
+                          )}
+                          {confidence >= 0.95 && (
+                            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-semibold">
+                              High confidence
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           {item.unit && (
                             <input

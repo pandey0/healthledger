@@ -28,16 +28,33 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const aiResponse = await fetch("http://192.168.1.29:8000/api/extract", {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+      const aiResponse = await fetch(`${backendUrl}/api/extract`, {
         method: "POST",
         body: formData,
+        headers: {
+          "Request-ID": `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        },
       });
 
       if (!aiResponse.ok) {
-        throw new Error("Could not read this document. Please ensure it is a valid report.");
+        const errorData = await aiResponse.json().catch(() => ({}));
+        const errorDetail = errorData.detail || "Could not read this document. Please ensure it is a valid report.";
+        throw new Error(errorDetail);
       }
 
       const aiData = await aiResponse.json();
+
+      // Check extraction quality
+      if (aiData.extraction_quality === "poor") {
+        const proceed = confirm(
+          "⚠️ The extraction quality is low. Some biomarkers may be inaccurate. Continue anyway?"
+        );
+        if (!proceed) {
+          setStatus("idle");
+          return;
+        }
+      }
 
       setStatus("uploading");
 
@@ -54,6 +71,9 @@ export default function UploadPage() {
           fileName: selectedFile.name,
           fileUrl: permanentFileUrl,
           testDate: new Date().toISOString().split('T')[0],
+          extractionQuality: aiData.extraction_quality,
+          warnings: aiData.warnings || [],
+          requestId: aiData.request_id,
         })
       );
 
@@ -61,7 +81,7 @@ export default function UploadPage() {
       setTimeout(() => router.push("/upload/review"), 1200);
     } catch (error: unknown) {
       setStatus("idle");
-      const message = error instanceof Error ? error.message : "An error occurred. Please try a clearer image.";
+      const message = error instanceof Error ? error.message : "An error occurred. Please try again or use a clearer image.";
       alert(message);
     }
   };
