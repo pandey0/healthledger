@@ -11,33 +11,10 @@ import {
 import EcosystemCarousel from "@/components/home/EcosystemCarousel";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import TourStarter from "@/components/onboarding/TourStarter";
-import { TRACKER_META, FREQUENCY_LABELS, type MedFrequency } from "@/lib/health-constants";
+import { TRACKER_META } from "@/lib/health-constants";
+import { getTodayMedicationLogs } from "@/lib/actions/health";
+import MedicationsWidget from "@/components/home/MedicationsWidget";
 
-// ─── Medication reminder hint ────────────────────────────────────────────────
-
-function getMedHint(frequency: string, hour: number): { label: string; urgent: boolean } {
-  switch (frequency) {
-    case "once_daily":
-      if (hour < 10)  return { label: "Due this morning", urgent: true };
-      if (hour < 22)  return { label: "Due today", urgent: false };
-      return { label: "Due tomorrow", urgent: false };
-    case "twice_daily":
-      if (hour < 9)   return { label: "Morning & evening doses due", urgent: true };
-      if (hour < 15)  return { label: "Evening dose due later", urgent: false };
-      if (hour < 21)  return { label: "Evening dose due now", urgent: true };
-      return { label: "Due tomorrow morning", urgent: false };
-    case "thrice_daily":
-      return { label: "3 doses today", urgent: false };
-    case "four_times_daily":
-      return { label: "4 doses today", urgent: false };
-    case "as_needed":
-      return { label: "Take as needed", urgent: false };
-    case "weekly":
-      return { label: "Due this week", urgent: false };
-    default:
-      return { label: "Check schedule", urgent: false };
-  }
-}
 
 export default async function HomePage() {
   const session = await auth();
@@ -48,7 +25,7 @@ export default async function HomePage() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const today = format(new Date(), "EEEE, MMMM do");
 
-  const [latestDoc, docCount, flaggedMarkers, userProfile, recentReadings, activeMeds] = userId
+  const [latestDoc, docCount, flaggedMarkers, userProfile, recentReadings, activeMeds, todayLogs] = userId
     ? await Promise.all([
         prisma.document.findFirst({
           where: { userId },
@@ -67,22 +44,19 @@ export default async function HomePage() {
           where: { id: userId },
           select: { gender: true, dateOfBirth: true },
         }),
-        // Recent manual readings across all trackers
         prisma.manualReading.findMany({
           where: { userId },
           orderBy: { recordedAt: "desc" },
           take: 5,
-          include: {
-            tracker: { select: { paramType: true, unit: true } },
-          },
+          include: { tracker: { select: { paramType: true, unit: true } } },
         }),
-        // Active medications
         prisma.medication.findMany({
           where: { userId, isActive: true },
           orderBy: { createdAt: "asc" },
         }),
+        getTodayMedicationLogs(userId),
       ])
-    : [null, 0, [], null, [], []];
+    : [null, 0, [], null, [], [], []];
 
   const profileIncomplete = !userProfile?.gender && !userProfile?.dateOfBirth;
   const isEmpty = docCount === 0;
@@ -90,8 +64,21 @@ export default async function HomePage() {
     ? Math.floor((Date.now() - new Date(latestDoc.createdAt).getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
-  const hasReadings  = recentReadings.length > 0;
-  const hasMeds      = activeMeds.length > 0;
+  const hasReadings = recentReadings.length > 0;
+
+  const serializedMeds = activeMeds.map((m) => ({
+    id: m.id,
+    name: m.name,
+    dosage: m.dosage,
+    frequency: m.frequency,
+    notes: m.notes ?? null,
+  }));
+
+  const serializedLogs = todayLogs.map((l) => ({
+    id: l.id,
+    medicationId: l.medicationId,
+    takenAt: l.takenAt.toISOString(),
+  }));
 
   return (
     <div className="flex flex-col animate-in fade-in duration-500 pb-28 md:pb-12">
@@ -109,84 +96,21 @@ export default async function HomePage() {
       <main className="px-6 space-y-5">
 
         {/* ── Today's Medications ────────────────────────────────────────────── */}
-        {(hasMeds || !isEmpty) && (
-          <section>
-            <div className="flex items-center justify-between mb-3 px-0.5">
-              <div className="flex items-center gap-2">
-                <Pill className="w-4 h-4 text-violet-500" />
-                <p className="text-[13px] font-bold text-slate-700">Today&apos;s Medications</p>
-              </div>
-              <Link
-                href="/trackers"
-                className="text-[11px] font-bold text-slate-400 hover:text-slate-700 flex items-center gap-1 transition-colors"
-              >
-                Manage <Settings2 className="w-3.5 h-3.5" />
-              </Link>
+        <section>
+          <div className="flex items-center justify-between mb-3 px-0.5">
+            <div className="flex items-center gap-2">
+              <Pill className="w-4 h-4 text-violet-500" />
+              <p className="text-[13px] font-bold text-slate-700">Today&apos;s Medications</p>
             </div>
-
-            {hasMeds ? (
-              <div className="bg-white rounded-[22px] border border-slate-100 shadow-sm overflow-hidden">
-                <div className="divide-y divide-slate-50">
-                  {activeMeds.map((med) => {
-                    const hint = getMedHint(med.frequency, hour);
-                    return (
-                      <div key={med.id} className="flex items-center justify-between px-4 py-3.5 gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0 ${
-                            hint.urgent ? "bg-violet-100" : "bg-slate-100"
-                          }`}>
-                            <Pill className={`w-4 h-4 ${hint.urgent ? "text-violet-600" : "text-slate-400"}`} />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-[14px] font-bold text-slate-800 truncate">{med.name}</p>
-                              <span className="text-[11px] font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full shrink-0">
-                                {med.dosage}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                              {FREQUENCY_LABELS[med.frequency as MedFrequency] ?? med.frequency}
-                              {med.notes && <span className="ml-1">· {med.notes}</span>}
-                            </p>
-                          </div>
-                        </div>
-                        <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${
-                          hint.urgent
-                            ? "bg-violet-100 text-violet-700"
-                            : "bg-slate-100 text-slate-500"
-                        }`}>
-                          {hint.label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Add medication footer */}
-                <Link
-                  href="/trackers"
-                  className="flex items-center justify-center gap-2 px-4 py-3 border-t border-slate-50 text-[12px] font-bold text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Add / edit medications
-                </Link>
-              </div>
-            ) : (
-              /* Empty state */
-              <Link href="/trackers" className="block group">
-                <div className="bg-white rounded-[22px] border border-dashed border-slate-200 p-5 flex items-center gap-4 hover:border-slate-300 transition-colors">
-                  <div className="w-10 h-10 rounded-[13px] bg-violet-50 flex items-center justify-center shrink-0">
-                    <Pill className="w-5 h-5 text-violet-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[14px] font-bold text-slate-700">Add your medications</p>
-                    <p className="text-[12px] text-slate-400 font-medium mt-0.5">Log your prescriptions and we&apos;ll remind you daily.</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
-                </div>
-              </Link>
-            )}
-          </section>
-        )}
+            <Link
+              href="/trackers"
+              className="text-[11px] font-bold text-slate-400 hover:text-slate-700 flex items-center gap-1 transition-colors"
+            >
+              Manage <Settings2 className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          <MedicationsWidget activeMeds={serializedMeds} todayLogs={serializedLogs} />
+        </section>
 
         {/* ── Lab Report Content ─────────────────────────────────────────────── */}
         {isEmpty ? (

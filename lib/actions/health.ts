@@ -250,3 +250,28 @@ export async function getMedications(userId: string) {
     orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
   });
 }
+
+// ─── Medication check-in (mark as taken) ─────────────────────────────────────
+
+export async function markMedicationTaken(medicationId: string) {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return { success: false, error: "Unauthorized." };
+
+  await prisma.medicationLog.create({ data: { userId, medicationId } });
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function getTodayMedicationLogs(userId: string) {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+
+  return prisma.medicationLog.findMany({
+    where: { userId, takenAt: { gte: start, lte: end } },
+    select: { id: true, medicationId: true, takenAt: true },
+    orderBy: { takenAt: "asc" },
+  });
+}

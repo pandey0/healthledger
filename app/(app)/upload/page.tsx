@@ -6,12 +6,10 @@ import {
   UploadCloud, CheckCircle2, Loader2, Lock, ShieldCheck,
   FileText, ImageIcon, X, AlertCircle, Plus, ArrowRight,
 } from "lucide-react";
-import { genUploader } from "uploadthing/client";
 import { pdfToImageFile } from "@/lib/pdfToImage";
+import { setPendingFile } from "@/lib/pendingFiles";
 
-const { uploadFiles } = genUploader();
-
-type FileStatus = "pending" | "converting" | "extracting" | "uploading" | "done" | "error";
+type FileStatus = "pending" | "converting" | "extracting" | "done" | "error";
 
 type QueueItem = {
   id: string;
@@ -23,7 +21,8 @@ type QueueItem = {
 
 type PendingData = {
   fileName: string;
-  fileUrl: string;
+  fileUrl: string;      // empty until user saves to vault
+  fileKey: string;      // key to retrieve file from pendingFiles in-memory store
   extractedItems: ExtractedMarker[];
   testDate: string;
   reportType?: string;
@@ -61,7 +60,6 @@ function statusLabel(status: FileStatus) {
   switch (status) {
     case "converting":  return "Converting PDF…";
     case "extracting":  return "AI extracting markers…";
-    case "uploading":   return "Securing in vault…";
     case "done":        return "Ready to review";
     case "error":       return "Failed";
     default:            return "Waiting";
@@ -140,15 +138,17 @@ export default function UploadPage() {
 
         const aiData = await aiResponse.json();
 
-        // Step 3: upload to S3
-        setItemStatus(item.id, "uploading");
-        const utResponse = await uploadFiles("medicalReport", { files: [fileToProcess] });
-        const permanentFileUrl = utResponse[0].url;
+        // Step 3: keep processed file in memory — upload to storage only on vault save
+        const fileKey = results.length === 0 && queue.length === 1
+          ? "single"
+          : `batch_${results.length}`;
+        setPendingFile(fileKey, fileToProcess);
 
         const pendingData: PendingData = {
           extractedItems: aiData.data,
           fileName: item.file.name,
-          fileUrl: permanentFileUrl,
+          fileUrl: "",          // will be set when user saves to vault
+          fileKey,              // key to retrieve from pendingFiles store
           testDate: new Date().toISOString().split("T")[0],
           reportType: aiData.report_type || null,
           extractionQuality: aiData.extraction_quality,
@@ -179,7 +179,7 @@ export default function UploadPage() {
 
   const allDone = queue.length > 0 && queue.every((i) => i.status === "done" || i.status === "error");
   const anyProcessing = queue.some((i) =>
-    i.status === "converting" || i.status === "extracting" || i.status === "uploading"
+    i.status === "converting" || i.status === "extracting"
   );
 
   return (

@@ -8,10 +8,14 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { genUploader } from "uploadthing/client";
 import { saveDocumentData } from "@/lib/actions/vault";
 import { getReferenceRange, getValueStatus } from "@/lib/referenceRanges";
 import { normalizeUnit, getStandardUnit } from "@/lib/unitConversion";
+import { getPendingFile, clearPendingFile } from "@/lib/pendingFiles";
 import { nanoid } from "nanoid";
+
+const { uploadFiles } = genUploader();
 
 type ExtractedMarker = {
   id: string;
@@ -25,6 +29,7 @@ type ExtractedMarker = {
 type PendingData = {
   fileName: string;
   fileUrl: string;
+  fileKey?: string;
   extractedItems: ExtractedMarker[];
   testDate: string;
   reportType?: string;
@@ -118,10 +123,29 @@ export default function BatchReviewPage() {
   };
 
   const saveReport = async (index: number): Promise<boolean> => {
-    const report = batch[index];
+    const report = batch![index];
+    let fileUrl = report.fileUrl;
+
+    // Upload to storage only when user saves to vault
+    if (!fileUrl && report.fileKey) {
+      const file = getPendingFile(report.fileKey);
+      if (!file) {
+        toast.error(`File for "${report.fileName}" is no longer available. Please re-upload.`);
+        return false;
+      }
+      try {
+        const utResponse = await uploadFiles("medicalReport", { files: [file] });
+        fileUrl = utResponse[0].url;
+        clearPendingFile(report.fileKey);
+      } catch {
+        toast.error(`Failed to upload "${report.fileName}". Please try again.`);
+        return false;
+      }
+    }
+
     const result = await saveDocumentData({
       fileName: report.fileName,
-      fileUrl: report.fileUrl,
+      fileUrl,
       extractedItems: report.extractedItems,
       testDate: report.testDate,
       reportType: report.reportType,

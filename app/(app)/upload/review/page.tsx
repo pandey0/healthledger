@@ -5,10 +5,14 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, FileText, AlertCircle, Trash2, Loader2, ArrowLeft, ShieldCheck, Calendar, Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { genUploader } from "uploadthing/client";
 import { saveDocumentData } from "@/lib/actions/vault";
 import { getReferenceRange, getValueStatus } from "@/lib/referenceRanges";
 import { normalizeUnit, getStandardUnit } from "@/lib/unitConversion";
+import { getPendingFile, clearPendingFile } from "@/lib/pendingFiles";
 import { nanoid } from "nanoid";
+
+const { uploadFiles } = genUploader();
 
 type ExtractedMarker = {
   id: string;
@@ -22,6 +26,7 @@ type ExtractedMarker = {
 type PendingData = {
   fileName: string;
   fileUrl: string;
+  fileKey?: string;
   extractedItems: ExtractedMarker[];
   testDate: string;
   reportType?: string;
@@ -161,9 +166,31 @@ export default function ReviewPage() {
     if (!pendingData) return;
     setIsSaving(true);
 
+    let fileUrl = pendingData.fileUrl;
+
+    // Upload to storage only when user confirms vault save
+    if (!fileUrl && pendingData.fileKey) {
+      const file = getPendingFile(pendingData.fileKey);
+      if (!file) {
+        toast.error("File no longer available — please re-upload your report.");
+        setIsSaving(false);
+        router.push("/upload");
+        return;
+      }
+      try {
+        const utResponse = await uploadFiles("medicalReport", { files: [file] });
+        fileUrl = utResponse[0].url;
+        clearPendingFile(pendingData.fileKey);
+      } catch {
+        toast.error("Failed to upload file. Please try again.");
+        setIsSaving(false);
+        return;
+      }
+    }
+
     const result = await saveDocumentData({
       fileName: pendingData.fileName,
-      fileUrl: pendingData.fileUrl,
+      fileUrl,
       extractedItems: pendingData.extractedItems,
       testDate: pendingData.testDate,
       reportType: pendingData.reportType,
@@ -249,13 +276,15 @@ export default function ReviewPage() {
           </label>
         </div>
 
-        {/* View original */}
-        <a href={pendingData.fileUrl} target="_blank" rel="noreferrer">
-          <div className="flex items-center gap-3 bg-white rounded-[16px] px-4 py-3 border border-slate-100 shadow-sm hover:border-slate-200 transition-colors">
-            <FileText className="w-4 h-4 text-slate-400 shrink-0" />
-            <span className="text-[14px] font-semibold text-slate-600 flex-1">View Original Document</span>
-          </div>
-        </a>
+        {/* View original — only available after saving to vault */}
+        {pendingData.fileUrl && (
+          <a href={pendingData.fileUrl} target="_blank" rel="noreferrer">
+            <div className="flex items-center gap-3 bg-white rounded-[16px] px-4 py-3 border border-slate-100 shadow-sm hover:border-slate-200 transition-colors">
+              <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+              <span className="text-[14px] font-semibold text-slate-600 flex-1">View Original Document</span>
+            </div>
+          </a>
+        )}
 
         {/* Instruction */}
         <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-[16px] px-4 py-3">
