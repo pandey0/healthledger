@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Plus, Activity, Settings } from "lucide-react";
 import MobileNav from "@/components/layout/MobileNav";
 import NavLinks from "@/components/layout/NavLinks";
+import { Toaster } from "sonner";
 
 export default async function AppLayout({
   children,
@@ -86,6 +87,7 @@ export default async function AppLayout({
       {/* MOBILE BOTTOM NAV */}
       <MobileNav />
 
+      <Toaster position="top-center" richColors />
     </div>
   );
 }

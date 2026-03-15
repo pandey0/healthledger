@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search, X, AlertTriangle, Filter } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Search, X, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import VaultFilters from "./VaultFilters";
 import VaultList from "./VaultList";
+
+const PAGE_SIZE = 10;
 
 interface VaultDocument {
   id: string;
@@ -24,6 +26,7 @@ export default function VaultContent({ documents }: VaultContentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const availableYears = useMemo(() => {
     const years = new Set(documents.map((d) => new Date(d.createdAt).getFullYear()));
@@ -74,6 +77,12 @@ export default function VaultContent({ documents }: VaultContentProps) {
   }, [documents, selectedYear, selectedType, flaggedOnly, searchQuery, sortOrder]);
 
   const hasActiveFilters = flaggedOnly || selectedType !== null || searchQuery.trim() !== "";
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [selectedYear, selectedType, flaggedOnly, searchQuery, sortOrder]);
+
+  const totalPages = Math.ceil(filteredAndSorted.length / PAGE_SIZE);
+  const paginated = filteredAndSorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <>
@@ -171,7 +180,45 @@ export default function VaultContent({ documents }: VaultContentProps) {
         </div>
       )}
 
-      <VaultList documents={filteredAndSorted} />
+      <VaultList documents={paginated} />
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-6 pt-4 pb-2">
+          <p className="text-[12px] font-semibold text-slate-400">
+            Page {page} of {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="w-8 h-8 rounded-[10px] bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:border-slate-300 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-8 h-8 rounded-[10px] text-[13px] font-bold transition-all ${
+                  p === page
+                    ? "bg-[#1A365D] text-white"
+                    : "bg-white border border-slate-200 text-slate-500 hover:border-slate-300"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="w-8 h-8 rounded-[10px] bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:border-slate-300 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

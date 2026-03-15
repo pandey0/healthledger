@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, User, Calendar, ChevronDown, Save, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, User, Calendar, Save } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { updateUserProfile } from "@/lib/actions/user";
 
 type ProfileData = {
@@ -13,9 +13,7 @@ type ProfileData = {
 };
 
 export default function SettingsPage() {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [saved, setSaved] = useState(false);
 
   const [form, setForm] = useState<ProfileData>({
     name: "",
@@ -48,8 +46,9 @@ export default function SettingsPage() {
       });
 
       if (result.success) {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+        toast.success("Profile saved");
+      } else {
+        toast.error(result.error ?? "Failed to save profile");
       }
     });
   };
@@ -176,18 +175,9 @@ export default function SettingsPage() {
         <button
           onClick={handleSave}
           disabled={isPending}
-          className={`w-full flex items-center justify-center gap-2 py-4 rounded-[16px] font-bold text-[15px] transition-all shadow-md ${
-            saved
-              ? "bg-emerald-500 text-white"
-              : "bg-[#1A365D] hover:bg-[#12243e] text-white hover:-translate-y-0.5 active:scale-95"
-          }`}
+          className="w-full flex items-center justify-center gap-2 py-4 rounded-[16px] font-bold text-[15px] transition-all shadow-md bg-[#1A365D] hover:bg-[#12243e] text-white hover:-translate-y-0.5 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {saved ? (
-            <>
-              <CheckCircle2 className="w-5 h-5" />
-              Saved!
-            </>
-          ) : isPending ? (
+          {isPending ? (
             "Saving..."
           ) : (
             <>
