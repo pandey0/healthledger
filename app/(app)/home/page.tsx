@@ -142,28 +142,6 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* Setup steps */}
-            <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-sm">
-              <h3 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-4">Get started in 3 steps</h3>
-              <div className="space-y-4">
-                {[
-                  { step: "1", title: "Upload a lab report",   desc: "Blood test, lipid profile, CBC — any report works.", done: true  },
-                  { step: "2", title: "Review extracted data", desc: "AI extracts every biomarker automatically.",           done: false },
-                  { step: "3", title: "Track your trends",     desc: "See how your health evolves over time.",              done: false },
-                ].map((item) => (
-                  <div key={item.step} className="flex items-start gap-3">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0 mt-0.5 ${item.done ? "bg-gradient-to-br from-teal-400 to-cyan-500 text-white shadow-sm" : "bg-slate-100 text-slate-400"}`}>
-                      {item.step}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[14px] font-bold text-slate-800">{item.title}</p>
-                      <p className="text-[12px] text-slate-400 font-medium mt-0.5">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Feature preview */}
             <div>
               <h3 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">What you&apos;ll unlock</h3>
