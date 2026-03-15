@@ -19,7 +19,7 @@ export default async function HomePage() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const today = format(new Date(), "EEEE, MMMM do");
 
-  const [latestDoc, docCount, flaggedMarkers, recentMarkers] = userId
+  const [latestDoc, docCount, flaggedMarkers] = userId
     ? await Promise.all([
         prisma.document.findFirst({
           where: { userId },
@@ -34,15 +34,8 @@ export default async function HomePage() {
           distinct: ["markerName"],
           select: { markerName: true, numericValue: true, unit: true, flag: true, testDate: true },
         }),
-        prisma.extractedData.findMany({
-          where: { userId, numericValue: { not: null } },
-          orderBy: { testDate: "desc" },
-          take: 8,
-          distinct: ["markerName"],
-          select: { markerName: true, numericValue: true, unit: true, flag: true, testDate: true },
-        }),
       ])
-    : [null, 0, [], []];
+    : [null, 0, []];
 
   const isEmpty = docCount === 0;
   const daysSinceUpload = latestDoc
@@ -210,54 +203,6 @@ export default async function HomePage() {
                   <Link href="/upload" className="inline-flex items-center gap-1 mt-3 text-[12px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-[10px] transition-colors border border-amber-100">
                     Upload Report <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
-                </div>
-              </div>
-            )}
-
-            {/* Recent readings grid */}
-            {recentMarkers.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-3 px-1">
-                  <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Recent Readings</p>
-                  <Link href="/vault" className="text-[12px] font-bold text-slate-400 hover:text-slate-700 transition-colors flex items-center gap-1">
-                    All reports <ChevronRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {recentMarkers.map((m) => {
-                    const isHigh = m.flag?.toLowerCase() === "high";
-                    const isLow = m.flag?.toLowerCase() === "low";
-                    const isFlagged = isHigh || isLow;
-                    return (
-                      <Link
-                        key={m.markerName}
-                        href={`/vault/marker/${encodeURIComponent(m.markerName)}`}
-                        className="bg-white rounded-[18px] p-4 border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all group"
-                      >
-                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate capitalize mb-2">{m.markerName}</p>
-                        <div className="flex items-end gap-1.5">
-                          <span className={`text-[22px] font-extrabold tabular-nums leading-none ${isFlagged ? (isHigh ? "text-red-600" : "text-blue-600") : "text-slate-800"}`}>
-                            {m.numericValue}
-                          </span>
-                          <span className="text-[11px] font-semibold text-slate-400 mb-0.5">{m.unit}</span>
-                        </div>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            {format(new Date(m.testDate), "MMM d")}
-                          </span>
-                          {isFlagged ? (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isHigh ? "bg-red-50 text-red-500" : "bg-blue-50 text-blue-500"}`}>
-                              {isHigh ? "High" : "Low"}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">
-                              Normal
-                            </span>
-                          )}
-                        </div>
-                      </Link>
-                    );
-                  })}
                 </div>
               </div>
             )}

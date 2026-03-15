@@ -5,127 +5,6 @@ import { getReferenceRange, isInRange } from "@/lib/referenceRanges";
 import { getUserProfile } from "@/lib/dal/user";
 import TrendGraph from "@/components/vault/TrendGraph";
 
-// Plain-English context for common markers
-function getMarkerContext(
-  name: string,
-  status: "normal" | "high" | "low" | "unknown"
-): { what: string; context: string } | null {
-  const key = name.toLowerCase().trim();
-
-  const lookup: Record<string, { what: string; normal: string; high: string; low: string }> = {
-    hemoglobin: {
-      what: "Hemoglobin is the protein in red blood cells that carries oxygen around your body.",
-      normal: "Your level indicates healthy oxygen-carrying capacity.",
-      high: "A high level may indicate dehydration or a condition called polycythemia. Staying well-hydrated and a follow-up test can help clarify.",
-      low: "A low level may suggest anemia, which can cause fatigue, weakness, or shortness of breath. Consider discussing with your doctor.",
-    },
-    hb: {
-      what: "Hemoglobin is the protein in red blood cells that carries oxygen around your body.",
-      normal: "Your level indicates healthy oxygen-carrying capacity.",
-      high: "A high level may indicate dehydration or a condition called polycythemia.",
-      low: "A low level may suggest anemia. Common causes include iron deficiency, B12 deficiency, or blood loss.",
-    },
-    glucose: {
-      what: "Blood glucose measures the amount of sugar in your bloodstream at the time of the test.",
-      normal: "Your fasting glucose is within the healthy range.",
-      high: "An elevated reading may suggest impaired glucose metabolism or pre-diabetes. A repeat fasting test and HbA1c can give a clearer picture.",
-      low: "A low reading (hypoglycemia) can cause shakiness and dizziness. If recurring, discuss with your doctor.",
-    },
-    hba1c: {
-      what: "HbA1c reflects your average blood sugar levels over the past 2–3 months — a long-term view of glucose control.",
-      normal: "Your level is in the non-diabetic range, indicating good long-term glucose control.",
-      high: "A high HbA1c suggests sustained elevated blood sugar. Values above 6.5% are generally diagnostic of diabetes.",
-      low: "A very low HbA1c is uncommon but may occur with certain anemias or frequent hypoglycemia.",
-    },
-    "total cholesterol": {
-      what: "Total cholesterol is the overall amount of cholesterol in your blood, including both LDL and HDL.",
-      normal: "Your level is in the desirable range, associated with lower cardiovascular risk.",
-      high: "Elevated cholesterol increases the risk of heart disease over time. Diet, exercise, and sometimes medication can help.",
-      low: "Very low cholesterol is uncommon and rarely clinically significant on its own.",
-    },
-    ldl: {
-      what: "LDL (low-density lipoprotein) is often called 'bad cholesterol' because high levels can build up in artery walls.",
-      normal: "Your LDL is at an optimal level, which supports heart health.",
-      high: "Elevated LDL is a key risk factor for cardiovascular disease. Reducing saturated fats and increasing activity can help.",
-      low: "Low LDL is generally considered favorable for heart health.",
-    },
-    hdl: {
-      what: "HDL (high-density lipoprotein) is called 'good cholesterol' because it helps remove other forms of cholesterol from your bloodstream.",
-      normal: "Your HDL is at a healthy level — higher HDL is protective for the heart.",
-      high: "High HDL is generally a good sign and associated with lower cardiovascular risk.",
-      low: "Low HDL is a risk factor for heart disease. Regular aerobic exercise is one of the most effective ways to raise it.",
-    },
-    triglycerides: {
-      what: "Triglycerides are the most common type of fat in the body, derived from the calories you don't immediately use.",
-      normal: "Your triglyceride level is normal.",
-      high: "High triglycerides are often linked to diet, metabolic syndrome, or diabetes. Reducing refined carbs and alcohol typically helps.",
-      low: "Low triglycerides are not usually a concern.",
-    },
-    tsh: {
-      what: "TSH (thyroid-stimulating hormone) is produced by your pituitary gland and tells your thyroid how much hormone to make.",
-      normal: "Your TSH is within the normal range, suggesting your thyroid is functioning well.",
-      high: "A high TSH may indicate an underactive thyroid (hypothyroidism). Symptoms can include fatigue, weight gain, and feeling cold.",
-      low: "A low TSH may indicate an overactive thyroid (hyperthyroidism). Symptoms can include rapid heartbeat, weight loss, and anxiety.",
-    },
-    "vitamin d": {
-      what: "Vitamin D supports bone health, immune function, and has roles in muscle and mood regulation.",
-      normal: "Your Vitamin D is in the sufficient range.",
-      high: "Very high Vitamin D (usually from excess supplementation) can cause toxicity, though this is rare.",
-      low: "Low Vitamin D is common and can cause bone weakness and fatigue. Sunlight exposure and supplementation are the main remedies.",
-    },
-    "vitamin b12": {
-      what: "Vitamin B12 is essential for nerve function, DNA synthesis, and the production of red blood cells.",
-      normal: "Your B12 level is in the normal range.",
-      high: "High B12 without supplementation can occasionally indicate liver or blood disorders — worth mentioning to your doctor.",
-      low: "Low B12 can cause fatigue, neurological symptoms, and a type of anemia. It's common in those with plant-based diets.",
-    },
-    creatinine: {
-      what: "Creatinine is a waste product from normal muscle activity that your kidneys filter out of the blood.",
-      normal: "Your creatinine is in the normal range, suggesting healthy kidney filtration.",
-      high: "Elevated creatinine may indicate reduced kidney function. Dehydration can also temporarily raise levels.",
-      low: "Low creatinine is usually not a concern and may reflect low muscle mass.",
-    },
-    alt: {
-      what: "ALT (alanine aminotransferase) is an enzyme found mainly in liver cells. Elevated levels indicate liver stress.",
-      normal: "Your ALT is within the normal range, indicating healthy liver function.",
-      high: "Elevated ALT may signal liver inflammation, which can stem from fatty liver, alcohol, medications, or infections.",
-      low: "Low ALT is not clinically significant.",
-    },
-    ferritin: {
-      what: "Ferritin is a protein that stores iron and releases it as needed. It's the best indicator of your body's iron reserves.",
-      normal: "Your ferritin level reflects adequate iron stores.",
-      high: "Elevated ferritin can indicate inflammation, liver disease, or iron overload. A follow-up test with a full iron panel helps clarify.",
-      low: "Low ferritin means your iron stores are depleted, even if hemoglobin appears normal. This is an early sign of iron deficiency.",
-    },
-    "uric acid": {
-      what: "Uric acid is a waste product from the breakdown of purines found in many foods. It's filtered by the kidneys.",
-      normal: "Your uric acid is within the normal range.",
-      high: "High uric acid can crystallize in joints, causing gout. It's also associated with kidney stones. Reducing red meat and alcohol can help.",
-      low: "Low uric acid is uncommon and generally not a clinical concern.",
-    },
-    platelets: {
-      what: "Platelets are tiny blood cells that help your body form clots to stop bleeding.",
-      normal: "Your platelet count is normal.",
-      high: "A high platelet count can sometimes increase clotting risk. Causes range from infection to inflammatory conditions.",
-      low: "A low platelet count can increase bleeding risk. Causes include viral infections, medications, or certain bone marrow conditions.",
-    },
-    wbc: {
-      what: "White blood cells (WBC) are your immune system's primary fighters against infection and disease.",
-      normal: "Your white blood cell count is in the normal range.",
-      high: "An elevated WBC often indicates your body is fighting an infection or inflammation.",
-      low: "A low WBC can reduce your ability to fight infection. It can result from viral illness, certain medications, or bone marrow issues.",
-    },
-  };
-
-  const entry = lookup[key];
-  if (!entry) return null;
-
-  const contextMap = { normal: entry.normal, high: entry.high, low: entry.low, unknown: "" };
-  const context = contextMap[status] || "";
-
-  return context ? { what: entry.what, context } : null;
-}
-
 export default async function MarkerTrendPage({
   params,
 }: {
@@ -157,7 +36,6 @@ export default async function MarkerTrendPage({
   const minVal = values.length ? Math.min(...values) : null;
   const maxVal = values.length ? Math.max(...values) : null;
 
-  // Trend direction (compare latest vs previous)
   const trendDirection =
     numericHistory.length >= 2
       ? numericHistory[0].numericValue! > numericHistory[1].numericValue!
@@ -167,18 +45,8 @@ export default async function MarkerTrendPage({
         : "stable"
       : null;
 
-  // Change from first recorded to latest
   const firstVal = numericHistory.length >= 2 ? numericHistory[numericHistory.length - 1].numericValue! : null;
   const totalChange = firstVal !== null && latestValue !== null ? latestValue - firstVal : null;
-
-  // Status for context
-  const contextStatus =
-    latestValue === null ? "unknown" :
-    latestInRange === true ? "normal" :
-    ref && latestValue > ref.max ? "high" :
-    "low";
-
-  const markerContext = getMarkerContext(decodedMarkerName, contextStatus as "normal" | "high" | "low" | "unknown");
 
   return (
     <div className="flex flex-col animate-in slide-in-from-right-4 duration-500 pb-12">
@@ -210,7 +78,7 @@ export default async function MarkerTrendPage({
 
       <main className="px-6 space-y-4">
 
-        {/* Current value + status card */}
+        {/* Current value + status */}
         {latestValue !== null && (
           <div className={`rounded-[24px] p-5 border ${
             latestInRange === true
@@ -228,11 +96,7 @@ export default async function MarkerTrendPage({
                 <span className="text-[16px] font-semibold text-slate-400 mb-1">{unit}</span>
               </div>
               {trendDirection && (
-                <div className={`flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full ${
-                  trendDirection === "up" ? "bg-white/60 text-slate-600" :
-                  trendDirection === "down" ? "bg-white/60 text-slate-600" :
-                  "bg-white/60 text-slate-500"
-                }`}>
+                <div className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full bg-white/60 text-slate-600">
                   {trendDirection === "up" && <TrendingUp className="w-3.5 h-3.5" />}
                   {trendDirection === "down" && <TrendingDown className="w-3.5 h-3.5" />}
                   {trendDirection === "stable" && <Minus className="w-3.5 h-3.5" />}
@@ -272,31 +136,14 @@ export default async function MarkerTrendPage({
           </div>
         )}
 
-        {/* Plain-English context */}
-        {markerContext && (
-          <div className="bg-slate-50 rounded-[20px] p-4 border border-slate-100">
-            <p className="text-[13px] font-medium text-slate-600 leading-relaxed">{markerContext.what}</p>
-            <p className={`text-[13px] font-medium leading-relaxed mt-2 ${
-              contextStatus === "normal" ? "text-emerald-700" :
-              contextStatus === "high" ? "text-amber-700" :
-              contextStatus === "low" ? "text-blue-700" :
-              "text-slate-600"
-            }`}>
-              {markerContext.context}
-            </p>
-          </div>
-        )}
-
-        {/* Reference range info */}
+        {/* Reference range */}
         {ref ? (
           <div className="bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm flex items-start gap-3">
             <div className="w-8 h-8 bg-blue-50 rounded-[10px] flex items-center justify-center shrink-0">
               <Info className="w-4 h-4 text-blue-500" />
             </div>
             <div>
-              <p className="text-[13px] font-bold text-slate-800">
-                {ref.label}
-              </p>
+              <p className="text-[13px] font-bold text-slate-800">{ref.label}</p>
               <p className="text-[13px] font-semibold text-slate-500 mt-0.5">
                 {ref.min}–{ref.max === 999 ? "↑" : ref.max} {ref.unit}
               </p>
@@ -338,7 +185,7 @@ export default async function MarkerTrendPage({
           )}
         </div>
 
-        {/* Historical data table */}
+        {/* History table */}
         {numericHistory.length > 0 && (
           <div>
             <p className="text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">History</p>
