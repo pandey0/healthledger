@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, FileText, AlertCircle, Trash2, Loader2, ArrowLeft, ShieldCheck } from "lucide-react";
+import { CheckCircle2, FileText, AlertCircle, Trash2, Loader2, ArrowLeft, ShieldCheck, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { saveDocumentData } from "@/lib/actions/vault";
 import { getReferenceRange } from "@/lib/referenceRanges";
@@ -19,6 +19,7 @@ type PendingData = {
   fileName: string;
   fileUrl: string;
   extractedItems: ExtractedMarker[];
+  testDate: string;
 };
 
 function flagColors(flag: string) {
@@ -59,6 +60,14 @@ export default function ReviewPage() {
     });
   };
 
+  const handleDateChange = (newDate: string) => {
+    if (!pendingData) return;
+    setPendingData({
+      ...pendingData,
+      testDate: newDate,
+    });
+  };
+
   const handleConfirm = async () => {
     if (!pendingData) return;
     setIsSaving(true);
@@ -67,6 +76,7 @@ export default function ReviewPage() {
       fileName: pendingData.fileName,
       fileUrl: pendingData.fileUrl,
       extractedItems: pendingData.extractedItems,
+      testDate: pendingData.testDate,
     });
 
     if (!result.success) {
@@ -119,6 +129,22 @@ export default function ReviewPage() {
               {flaggedCount === 0 ? "All normal" : "Flagged"}
             </p>
           </div>
+        </div>
+
+        {/* Test date picker */}
+        <div className="bg-white rounded-[16px] px-4 py-3 border border-slate-100 shadow-sm">
+          <label className="flex items-center gap-3">
+            <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+            <div className="flex-1">
+              <p className="text-[12px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Test Date</p>
+              <input
+                type="date"
+                value={pendingData.testDate}
+                onChange={(e) => handleDateChange(e.target.value)}
+                className="w-full text-[14px] font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-[10px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#1A365D]/20"
+              />
+            </div>
+          </label>
         </div>
 
         {/* View original */}

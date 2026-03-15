@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 type SaveDocumentPayload = {
   fileName: string;
   fileUrl: string;
+  testDate: string;
   extractedItems: {
     marker: string;
     value: string;
@@ -33,6 +34,7 @@ export async function saveDocumentData(payload: SaveDocumentPayload) {
         fileName: payload.fileName,
         fileUrl: payload.fileUrl,
         status: "processed",
+        testDate: new Date(payload.testDate),
       },
     });
 
@@ -50,7 +52,7 @@ export async function saveDocumentData(payload: SaveDocumentPayload) {
         textValue: isNumeric ? null : item.value,
         unit: item.unit,
         flag: item.flag.toLowerCase(), // Standardize flags
-        testDate: new Date(), // Using upload date as test date for the MVP
+        testDate: new Date(payload.testDate), // Use the test date provided by user
       };
     });
 
