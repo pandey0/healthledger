@@ -51,8 +51,10 @@ model User {
   dateOfBirth   DateTime?
 
   // HealthLedger specific relations
-  documents     Document[]
-  extractedData ExtractedData[]
+  documents      Document[]
+  extractedData  ExtractedData[]
+  manualTrackers ManualTracker[]
+  medications    Medication[]
 }
 
 model VerificationToken {
@@ -102,4 +104,39 @@ model ExtractedData {
   
   // Index for faster querying when building trend graphs
   @@index([userId, markerName])
+}
+
+// ------------------------------------------------------
+// 3. MANUAL HEALTH TRACKING
+// ------------------------------------------------------
+
+model ManualTracker {
+  id        String   @id @default(cuid())
+  userId    String
+  paramType String   // "blood_pressure" | "blood_sugar" | "weight" | "heart_rate" | "spo2" | "temperature" | "hba1c"
+  unit      String   // e.g. "mmHg", "mg/dL", "kg", "bpm", "%", "°C"
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, paramType])
+  @@index([userId])
+}
+
+model Medication {
+  id        String    @id @default(cuid())
+  userId    String
+  name      String    // e.g. "Metformin"
+  dosage    String    // e.g. "500mg"
+  frequency String    // "once_daily" | "twice_daily" | "thrice_daily" | "four_times_daily" | "as_needed" | "weekly"
+  notes     String?
+  isActive  Boolean   @default(true)
+  startDate DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
