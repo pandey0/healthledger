@@ -9,7 +9,7 @@ import {
   ArrowUpRight, ArrowDownRight, Pill, Settings2,
 } from "lucide-react";
 import EcosystemCarousel from "@/components/home/EcosystemCarousel";
-import TourStarter from "@/components/onboarding/TourStarter";
+import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import { TRACKER_META } from "@/lib/health-constants";
 import { getTodayMedicationLogs } from "@/lib/actions/health";
 import MedicationsWidget from "@/components/home/MedicationsWidget";
@@ -24,7 +24,7 @@ export default async function HomePage() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const today = format(new Date(), "EEEE, MMMM do");
 
-  const [latestDoc, docCount, flaggedMarkers, recentReadings, activeMeds, todayLogs] = userId
+  const [latestDoc, docCount, flaggedMarkers, userProfile, recentReadings, activeMeds, todayLogs] = userId
     ? await Promise.all([
         prisma.document.findFirst({
           where: { userId },
@@ -39,6 +39,10 @@ export default async function HomePage() {
           distinct: ["markerName"],
           select: { markerName: true, numericValue: true, unit: true, flag: true, testDate: true },
         }),
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { gender: true, dateOfBirth: true },
+        }),
         prisma.manualReading.findMany({
           where: { userId },
           orderBy: { recordedAt: "desc" },
@@ -51,8 +55,9 @@ export default async function HomePage() {
         }),
         getTodayMedicationLogs(userId),
       ])
-    : [null, 0, [], [], [], []];
+    : [null, 0, [], null, [], [], []];
 
+  const profileIncomplete = !userProfile?.gender && !userProfile?.dateOfBirth;
   const isEmpty = docCount === 0;
   const daysSinceUpload = latestDoc
     ? Math.floor((Date.now() - new Date(latestDoc.createdAt).getTime()) / (1000 * 60 * 60 * 24))
@@ -76,6 +81,8 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col animate-in fade-in duration-500 pb-28 md:pb-12">
+      <OnboardingFlow firstName={firstName} profileIncomplete={profileIncomplete} />
+
       {/* Greeting header */}
       <header className="px-6 pt-10 pb-6">
         <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{today}</p>
@@ -129,7 +136,6 @@ export default async function HomePage() {
                       Upload First Report
                     </button>
                   </Link>
-                  <TourStarter isEmpty={isEmpty} />
                 </div>
               </div>
             </div>
