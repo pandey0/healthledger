@@ -6,7 +6,7 @@ import {
   Activity, Plus, TrendingUp,
   MessageSquareText, AlertTriangle, CheckCircle2,
   ArrowRight, ChevronRight, Clock, Sparkles, Zap,
-  ArrowUpRight, ArrowDownRight, Settings,
+  ArrowUpRight, ArrowDownRight,
 } from "lucide-react";
 import EcosystemCarousel from "@/components/home/EcosystemCarousel";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
@@ -56,18 +56,11 @@ export default async function HomePage() {
 
       {/* Greeting header */}
       <header className="px-6 pt-10 pb-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{today}</p>
-            <h1 className="text-[30px] font-extrabold text-slate-900 tracking-tight leading-tight">
-              {greeting},{" "}
-              <span className="bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">{firstName}.</span>
-            </h1>
-          </div>
-          <Link href="/settings" className="w-9 h-9 bg-white border border-slate-100 shadow-sm rounded-[12px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:border-slate-200 transition-all mt-1 shrink-0">
-            <Settings className="w-4 h-4" />
-          </Link>
-        </div>
+        <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{today}</p>
+        <h1 className="text-[30px] font-extrabold text-slate-900 tracking-tight leading-tight">
+          {greeting},{" "}
+          <span className="bg-gradient-to-r from-teal-500 to-cyan-600 bg-clip-text text-transparent">{firstName}.</span>
+        </h1>
       </header>
 
       <main className="px-6 space-y-6">
