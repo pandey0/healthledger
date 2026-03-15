@@ -34,7 +34,7 @@ export async function saveDocumentData(payload: SaveDocumentPayload) {
         fileName: payload.fileName,
         fileUrl: payload.fileUrl,
         status: "processed",
-        testDate: new Date(payload.testDate),
+        reportDate: new Date(payload.testDate),
       },
     });
 
