@@ -8,9 +8,6 @@ import {
   type TrackerParamType, type MedFrequency, type MedicationPayload,
 } from "@/lib/health-constants";
 
-// Re-export types so callers that need both actions + types can import one place
-export type { TrackerParamType, MedFrequency, MedicationPayload };
-
 // ─── Tracker actions ──────────────────────────────────────────────────────────
 
 export async function saveHealthTrackers(paramTypes: TrackerParamType[]) {
