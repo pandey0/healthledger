@@ -28,7 +28,7 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const aiResponse = await fetch("http://localhost:8000/api/extract", {
+      const aiResponse = await fetch("http://192.168.1.29:8000/api/extract", {
         method: "POST",
         body: formData,
       });
